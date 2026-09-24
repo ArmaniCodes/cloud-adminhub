@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from random import randint
+from fastapi import HTTPException
 
 app = FastAPI()
 
@@ -29,6 +30,15 @@ user_list = [{'id': 23,'name':"John Smith",'email':'john@doe.com',"role":"Lead M
 @app.get("/users",response_model=list[User])
 def get_users():
     return user_list
+
+@app.get("/users/{user_id}",response_model=User)
+def get_user_by_id(user_id: int):
+    for d in user_list:
+        if d.get('id') == user_id:
+            return d
+    raise HTTPException(status_code=404, detail= f"User with id: {user_id} does not exist")
+    
+               
 
 @app.post("/users",response_model=User)
 def post_user(user: CreateUser):
