@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from random import randint
 from fastapi import HTTPException
+from typing import Optional
 
 app = FastAPI()
 
@@ -15,6 +16,14 @@ class CreateUser(BaseModel):
      name: str
      email: str
      role: str
+
+class UpdateUser(BaseModel):
+     name: Optional[str] = None
+     email: Optional[str] = None
+     role: Optional[str] = None
+
+
+
 
 # Health Check
 @app.get("/health")
@@ -31,15 +40,34 @@ user_list = [{'id': 23,'name':"John Smith",'email':'john@doe.com',"role":"Lead M
 def get_users():
     return user_list
 
-@app.get("/users/{user_id}",response_model=User)
-def get_user_by_id(user_id: int):
+# Search for user by ID then return user
+def findUser(user_id):
     for d in user_list:
         if d.get('id') == user_id:
             return d
-    raise HTTPException(status_code=404, detail= f"User with id: {user_id} does not exist")
-    
-               
 
+# Return 404 if ID not present in user_list else return user
+@app.get("/users/{user_id}",response_model=User)
+def get_user_by_id(user_id: int):
+    user = findUser(user_id)
+    if user:
+        return user
+    else:
+        raise HTTPException(status_code=404, detail= f"User with id: {user_id} does not exist")
+
+# Update info about user 
+@app.patch("/users/{user_id}", response_model = User)
+def update_user(user_id: int, user: UpdateUser):
+    _user = findUser(user_id)
+    
+    if not _user:
+        raise HTTPException(status_code=404, detail= f"User with id: {user_id} does not exist")
+
+    # Convert UpdateUser to dictionary but only include what we want to update
+    _user.update(user.model_dump(exclude_unset=True))
+    return _user
+
+# Create a new User Endpoint
 @app.post("/users",response_model=User)
 def post_user(user: CreateUser):
     # Generate random temp id for now
