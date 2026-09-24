@@ -41,7 +41,7 @@ def get_users():
     return user_list
 
 # Search for user by ID then return user
-def findUser(user_id):
+def find_user(user_id):
     for d in user_list:
         if d.get('id') == user_id:
             return d
@@ -49,7 +49,7 @@ def findUser(user_id):
 # Return 404 if ID not present in user_list else return user
 @app.get("/users/{user_id}",response_model=User)
 def get_user_by_id(user_id: int):
-    user = findUser(user_id)
+    user = find_user(user_id)
     if user:
         return user
     else:
@@ -58,7 +58,7 @@ def get_user_by_id(user_id: int):
 # Update info about user 
 @app.patch("/users/{user_id}", response_model = User)
 def update_user(user_id: int, user: UpdateUser):
-    _user = findUser(user_id)
+    _user = find_user(user_id)
     
     if not _user:
         raise HTTPException(status_code=404, detail= f"User with id: {user_id} does not exist")
