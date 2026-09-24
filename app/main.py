@@ -1,6 +1,14 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 app = FastAPI()
+
+class User(BaseModel):
+        id: int
+        name: str
+        email:str
+        role: str
+
 
 # Health Check
 @app.get("/health")
@@ -13,6 +21,6 @@ user_list = [{'id': 23,'name':"John Smith",'email':'john@doe.com',"role":"Lead M
              ]
 
 # Users endpoint
-@app.get("/users")
+@app.get("/users",response_model=list[User])
 def get_users():
     return user_list
