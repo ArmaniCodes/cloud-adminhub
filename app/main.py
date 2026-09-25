@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from random import randint
 from fastapi import HTTPException
 from typing import Optional
@@ -9,17 +9,17 @@ app = FastAPI()
 class User(BaseModel):
         id: int
         name: str
-        email:str
+        email:EmailStr
         role: str
 
 class CreateUser(BaseModel):
      name: str
-     email: str
+     email: EmailStr
      role: str
 
 class UpdateUser(BaseModel):
      name: Optional[str] = None
-     email: Optional[str] = None
+     email: Optional[EmailStr] = None
      role: Optional[str] = None
 
 
