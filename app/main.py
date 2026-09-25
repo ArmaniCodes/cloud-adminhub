@@ -23,8 +23,6 @@ class UpdateUser(BaseModel):
      role: Optional[str] = None
 
 
-
-
 # Health Check
 @app.get("/health")
 def health_check():
@@ -66,6 +64,14 @@ def update_user(user_id: int, user: UpdateUser):
     # Convert UpdateUser to dictionary but only include what we want to update
     _user.update(user.model_dump(exclude_unset=True))
     return _user
+
+@app.delete("/users/{user_id}",response_model = User)
+def delete_user(user_id: int):
+    user = find_user(user_id)
+    if not user:
+            raise HTTPException(status_code=404, detail= f"User with id: {user_id} does not exist")
+    user_list.remove(user)
+    return user
 
 # Create a new User Endpoint
 @app.post("/users",response_model=User)
