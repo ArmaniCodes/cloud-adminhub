@@ -39,7 +39,7 @@ def get_users():
     return user_list
 
 # Search for user by ID then return user
-def find_user(user_id):
+def find_user(user_id: int) -> Optional[dict]:
     for d in user_list:
         if d.get('id') == user_id:
             return d
