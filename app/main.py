@@ -3,24 +3,33 @@ from pydantic import BaseModel, EmailStr
 from random import randint
 from fastapi import HTTPException
 from typing import Optional
+from enum import Enum
+
+
 
 app = FastAPI()
+
+# Enum for role validation
+class UserRole(Enum):
+    admin = "admin"
+    support = "support"
+    viewer = "viewer"
 
 class User(BaseModel):
         id: int
         name: str
         email:EmailStr
-        role: str
+        role: UserRole
 
 class CreateUser(BaseModel):
      name: str
      email: EmailStr
-     role: str
+     role: UserRole
 
 class UpdateUser(BaseModel):
      name: Optional[str] = None
      email: Optional[EmailStr] = None
-     role: Optional[str] = None
+     role: Optional[UserRole] = None
 
 
 # Health Check
@@ -29,8 +38,8 @@ def health_check():
     return {"status":"healthy"}
 
 # In-memory test users for development purposes
-user_list = [{'id': 23,'name':"John Smith",'email':'john@doe.com',"role":"Lead Marketing"},
-             {'id': 12,'name':"Sarah Smith",'email':'jane@doe.com',"role":"Recruiter"}
+user_list = [{'id': 23,'name':"John Smith",'email':'john@doe.com',"role":"admin"},
+             {'id': 12,'name':"Sarah Smith",'email':'jane@doe.com',"role":"support"}
              ]
 
 # Users endpoint
