@@ -1,8 +1,10 @@
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from app.models.base import Base
-from app.models.user import User # Loads user model and register its table with Base.metadata
+# Loads user model and register its table with Base.metadata
+from app.models.user import User as UserModel 
  
 load_dotenv()
 database_url = os.getenv("DATABASE_URL")
@@ -13,3 +15,14 @@ if not database_url:
 engine = create_engine(database_url)
 Base.metadata.create_all(engine)
 
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False)
+
+def get_db():
+    """Provide a database session and close it after the request."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

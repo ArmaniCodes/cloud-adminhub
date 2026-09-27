@@ -1,9 +1,12 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, EmailStr
 from random import randint
 from fastapi import HTTPException
 from typing import Optional
 from enum import Enum
+from sqlalchemy.orm import Session
+from app.database import get_db
+
 
 router = APIRouter()
 
@@ -44,7 +47,7 @@ def find_user(user_id: int) -> Optional[dict]:
 
 # Users endpoint
 @router.get("/users",response_model=list[User])
-def get_users():
+def get_users(db: Session = Depends(get_db)):
     return user_list
 
 
