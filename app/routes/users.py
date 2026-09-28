@@ -6,7 +6,8 @@ from typing import Optional
 from enum import Enum
 from sqlalchemy.orm import Session
 from app.database import get_db
-
+from app.models.user import User as UserModel
+from sqlalchemy import select
 
 router = APIRouter()
 
@@ -48,7 +49,9 @@ def find_user(user_id: int) -> Optional[dict]:
 # Users endpoint
 @router.get("/users",response_model=list[User])
 def get_users(db: Session = Depends(get_db)):
-    return user_list
+    stmt = select(UserModel)
+    users = db.scalars(stmt).all()
+    return users
 
 
 
