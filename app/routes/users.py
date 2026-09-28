@@ -57,10 +57,10 @@ def get_users(db: Session = Depends(get_db)):
 
 
 
-# Return 404 if ID not present in user_list else return user
+# Return 404 if ID not present in the db
 @router.get("/users/{user_id}",response_model=User)
-def get_user_by_id(user_id: int):
-    user = find_user(user_id)
+def get_user_by_id(user_id: int,  db: Session = Depends(get_db)):
+    user = db.get(UserModel,user_id)
     if user:
         return user
     else:
