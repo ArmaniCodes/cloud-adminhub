@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User as UserModel
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter()
 
@@ -93,6 +94,13 @@ def post_user(user: CreateUser, db: Session = Depends(get_db)):
         role = user.role.value
     )
     db.add(userm)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+         db.rollback()
+         raise HTTPException(
+            status_code = 409, 
+            detail = f'A user with that email already exists.'
+        )
     db.refresh(userm)
     return userm
