@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from random import randint
 from fastapi import HTTPException
 from typing import Optional
@@ -18,6 +18,8 @@ class UserRole(Enum):
     viewer = "viewer"
 
 class User(BaseModel):
+        model_config = ConfigDict(from_attributes=True)
+        
         id: int
         name: str
         email:EmailStr
@@ -86,10 +88,13 @@ def delete_user(user_id: int):
 
 # Create a new User Endpoint
 @router.post("/users",response_model=User)
-def post_user(user: CreateUser):
-    # Generate random temp id for now
-    generate_id = randint(1,1000)
-    new_user = {'id':generate_id}
-    new_user.update(user.model_dump())
-    user_list.append(new_user)
-    return new_user
+def post_user(user: CreateUser, db: Session = Depends(get_db)):
+    userm = UserModel(
+        name = user.name,
+        email = user.email,
+        role = user.role.value
+    )
+    db.add(userm)
+    db.commit()
+    db.refresh(userm)
+    return userm
