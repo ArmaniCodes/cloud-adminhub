@@ -51,13 +51,17 @@ def get_user_by_id(user_id: int,  db: Session = Depends(get_db)):
     else:
         raise HTTPException(status_code=404, detail= f"User with id: {user_id} does not exist")
 
-# Update info about user 
+
 @router.patch("/users/{user_id}", response_model = User)
 def update_user(user_id: int, user_update: UpdateUser, db: Session = Depends(get_db)):
+    
     user = db.get(UserModel,user_id)
     
     if not user:
-        raise HTTPException(status_code=404, detail= f"User with id: {user_id} does not exist")
+        raise HTTPException(
+             status_code=404, 
+             detail= f"User with id: {user_id} does not exist"
+             )
 
     # Convert the enum to a string before storing it in the database
     user_input = user_update.model_dump(exclude_unset=True)
@@ -66,8 +70,16 @@ def update_user(user_id: int, user_update: UpdateUser, db: Session = Depends(get
     
     for k,v in user_input.items():
         setattr(user,k,v)   
-
-    db.commit()
+    
+    try:
+        db.commit()
+    except IntegrityError:
+         db.rollback()
+         raise HTTPException(
+              status_code=409, 
+              detail = f'A user with that email already exists.'
+         )
+    
     db.refresh(user)
     return user
    
