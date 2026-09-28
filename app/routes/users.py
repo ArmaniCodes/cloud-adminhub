@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, EmailStr, ConfigDict
-from random import randint
 from fastapi import HTTPException
 from typing import Optional
 from enum import Enum
@@ -34,18 +33,6 @@ class UpdateUser(BaseModel):
      name: Optional[str] = None
      email: Optional[EmailStr] = None
      role: Optional[UserRole] = None
-
-
-# In-memory test users for development purposes
-user_list = [{'id': 23,'name':"John Smith",'email':'john@doe.com',"role":"admin"},
-             {'id': 12,'name':"Sarah Smith",'email':'jane@doe.com',"role":"support"}
-             ]
-
-# Search for user by ID then return user
-def find_user(user_id: int) -> Optional[dict]:
-    for d in user_list:
-        if d.get('id') == user_id:
-            return d
 
 
 @router.get("/users",response_model=list[User])
