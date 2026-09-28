@@ -68,15 +68,24 @@ def get_user_by_id(user_id: int,  db: Session = Depends(get_db)):
 
 # Update info about user 
 @router.patch("/users/{user_id}", response_model = User)
-def update_user(user_id: int, user: UpdateUser):
-    _user = find_user(user_id)
+def update_user(user_id: int, user_update: UpdateUser, db: Session = Depends(get_db)):
+    user = db.get(UserModel,user_id)
     
-    if not _user:
+    if not user:
         raise HTTPException(status_code=404, detail= f"User with id: {user_id} does not exist")
 
-    # Convert UpdateUser to dictionary but only include what we want to update
-    _user.update(user.model_dump(exclude_unset=True))
-    return _user
+    # Set role to str type not enum type so its compatible with the DB
+    user_input = user_update.model_dump(exclude_unset=True)
+    if "role" in user_input and type(user_input["role"]) == UserRole:
+         user_input["role"] = user_input["role"].value
+    
+    for k,v in user_input.items():
+        setattr(user,k,v)   
+
+    db.commit()
+    db.refresh(user)
+    return user
+   
 
 @router.delete("/users/{user_id}",response_model = User)
 def delete_user(user_id: int):
