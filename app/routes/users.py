@@ -1,40 +1,13 @@
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, EmailStr, ConfigDict
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
-from typing import Optional
-from enum import Enum
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User as UserModel
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from app.schemas.user import User, UserRole, CreateUser, UpdateUser
 
 router = APIRouter()
-
-# Allowed roles for users
-class UserRole(Enum):
-    admin = "admin"
-    support = "support"
-    viewer = "viewer"
-
-class User(BaseModel):
-        # Allow Pydantic to serialize SQLAlchemy ORM objects
-        model_config = ConfigDict(from_attributes=True)
-        id: int
-        name: str
-        email:EmailStr
-        role: UserRole
-
-class CreateUser(BaseModel):
-     name: str
-     email: EmailStr
-     role: UserRole
-
-class UpdateUser(BaseModel):
-     name: Optional[str] = None
-     email: Optional[EmailStr] = None
-     role: Optional[UserRole] = None
-
 
 @router.get("/users",response_model=list[User])
 def get_users(db: Session = Depends(get_db)):
