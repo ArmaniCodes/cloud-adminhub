@@ -98,7 +98,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     return user
 
 
-@router.post("/users",response_model=User)
+@router.post("/users",response_model=User,status_code=201)
 def post_user(user: CreateUser, db: Session = Depends(get_db)):
     userm = UserModel(
         name = user.name,
