@@ -39,8 +39,7 @@ def update_user(user_id: int, user_update: UpdateUser, db: Session = Depends(get
              )
         return user
     
-    except IntegrityError:
-         db.rollback()
+    except UserAlreadyExistsError:
          raise HTTPException(
               status_code=409, 
               detail = f'A user with that email already exists.'

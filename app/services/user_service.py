@@ -34,8 +34,12 @@ def upd_user(user_id: int, updated_info: UpdateUser, db: Session):
         
     for k,v in user_input.items():
         setattr(user,k,v)
-
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise UserAlreadyExistsError()
+    
     db.refresh(user)
     return user 
 
