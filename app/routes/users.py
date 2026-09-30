@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User as UserModel
 from app.schemas.user import User, UserRole, CreateUser, UpdateUser
-from app.services.user_service import create_user
+from app.services.user_service import create_user,find_user_by_id
 
 router = APIRouter()
 
@@ -19,11 +19,13 @@ def get_users(db: Session = Depends(get_db)):
 
 @router.get("/users/{user_id}",response_model=User)
 def get_user_by_id(user_id: int,  db: Session = Depends(get_db)):
-    user = db.get(UserModel,user_id)
-    if user:
-        return user
-    else:
+    
+    user = find_user_by_id(user_id,db)
+    if not user:
         raise HTTPException(status_code=404, detail= f"User with id: {user_id} does not exist")
+    return user
+   
+        
 
 
 @router.patch("/users/{user_id}", response_model = User)

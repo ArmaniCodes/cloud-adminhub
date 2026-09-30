@@ -12,3 +12,7 @@ def create_user(user: CreateUser, db: Session):
     db.commit()
     db.refresh(userm)
     return userm
+
+def find_user_by_id(user_id: int, db: Session):
+    user = db.get(UserModel,user_id)
+    return user
