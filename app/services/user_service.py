@@ -20,11 +20,11 @@ def create_user(user: CreateUser, db: Session):
     db.refresh(userm)
     return userm
 
-def find_user_by_id(user_id: int, db: Session):
+def get_user_by_id(user_id: int, db: Session):
     user = db.get(UserModel,user_id)
     return user
 
-def upd_user(user_id: int, updated_info: UpdateUser, db: Session):
+def update_user(user_id: int, updated_info: UpdateUser, db: Session):
     user = db.get(UserModel,user_id)
     if not user:
         return None
@@ -43,7 +43,7 @@ def upd_user(user_id: int, updated_info: UpdateUser, db: Session):
     db.refresh(user)
     return user 
 
-def del_user(user_id: int, db: Session):
+def delete_user(user_id: int, db: Session):
     user = db.get(UserModel,user_id)
     if not user:
         return None
