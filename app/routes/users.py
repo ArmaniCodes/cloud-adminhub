@@ -1,21 +1,17 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User as UserModel
 from app.schemas.user import User, UserRole, CreateUser, UpdateUser
-from app.services.user_service import create_user,find_user_by_id,upd_user,del_user
+from app.services.user_service import create_user,find_user_by_id,upd_user,del_user,list_users
 
 router = APIRouter()
 
 @router.get("/users",response_model=list[User])
 def get_users(db: Session = Depends(get_db)):
-    
-    stmt = select(UserModel)
-    users = db.scalars(stmt).all()
-    return users
+    return list_users(db)
 
 
 @router.get("/users/{user_id}",response_model=User)

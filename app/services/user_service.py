@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.schemas.user import CreateUser, UpdateUser, UserRole
 from app.models.user import User as UserModel
+from sqlalchemy import select
 
 def create_user(user: CreateUser, db: Session):
     userm = UserModel(
@@ -39,3 +40,8 @@ def del_user(user_id: int, db: Session):
     db.delete(user)
     db.commit()
     return user
+
+def list_users(db: Session):
+    stmt = select(UserModel)
+    users = db.scalars(stmt).all()
+    return users
