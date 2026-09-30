@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User as UserModel
 from app.schemas.user import User, UserRole, CreateUser, UpdateUser
-from app.services.user_service import create_user,find_user_by_id
+from app.services.user_service import create_user,find_user_by_id,upd_user
 
 router = APIRouter()
 
@@ -30,25 +30,14 @@ def get_user_by_id(user_id: int,  db: Session = Depends(get_db)):
 
 @router.patch("/users/{user_id}", response_model = User)
 def update_user(user_id: int, user_update: UpdateUser, db: Session = Depends(get_db)):
-    
-    user = db.get(UserModel,user_id)
-    
-    if not user:
-        raise HTTPException(
+    try:
+        user = upd_user(user_id, user_update, db)
+        if not user:
+            raise HTTPException(
              status_code=404, 
              detail= f"User with id: {user_id} does not exist"
              )
-
-    # Convert the enum to a string before storing it in the database
-    user_input = user_update.model_dump(exclude_unset=True)
-    if "role" in user_input and type(user_input["role"]) == UserRole:
-         user_input["role"] = user_input["role"].value
-    
-    for k,v in user_input.items():
-        setattr(user,k,v)   
-    
-    try:
-        db.commit()
+        return user
     except IntegrityError:
          db.rollback()
          raise HTTPException(
@@ -56,8 +45,6 @@ def update_user(user_id: int, user_update: UpdateUser, db: Session = Depends(get
               detail = f'A user with that email already exists.'
          )
     
-    db.refresh(user)
-    return user
    
 
 @router.delete("/users/{user_id}",response_model = User)
