@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User as UserModel
 from app.schemas.user import User, UserRole, CreateUser, UpdateUser
-from app.services.user_service import create_user,find_user_by_id,upd_user,del_user,list_users
+from app.services.user_service import (create_user,find_user_by_id,upd_user,del_user,list_users)
+from app.exceptions.user import UserAlreadyExistsError
 
 router = APIRouter()
 
@@ -60,13 +61,10 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 
 @router.post("/users",response_model=User,status_code=201)
 def post_user(user: CreateUser, db: Session = Depends(get_db)):
-    
     try:
         created_user = create_user(user,db)
         return created_user
-    
-    except IntegrityError:
-        db.rollback()
+    except UserAlreadyExistsError:
         raise HTTPException(
         status_code=409,
         detail="A user with that email already exists."

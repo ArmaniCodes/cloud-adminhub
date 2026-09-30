@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 from app.schemas.user import CreateUser, UpdateUser, UserRole
 from app.models.user import User as UserModel
 from sqlalchemy import select
+from app.exceptions.user import UserAlreadyExistsError
+from sqlalchemy.exc import IntegrityError
 
 def create_user(user: CreateUser, db: Session):
     userm = UserModel(
@@ -10,7 +12,11 @@ def create_user(user: CreateUser, db: Session):
             role = user.role.value
         )
     db.add(userm)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise UserAlreadyExistsError()
     db.refresh(userm)
     return userm
 
