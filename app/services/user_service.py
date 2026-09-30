@@ -31,3 +31,11 @@ def upd_user(user_id: int, updated_info: UpdateUser, db: Session):
     db.commit()
     db.refresh(user)
     return user 
+
+def del_user(user_id: int, db: Session):
+    user = db.get(UserModel,user_id)
+    if not user:
+        return None
+    db.delete(user)
+    db.commit()
+    return user
