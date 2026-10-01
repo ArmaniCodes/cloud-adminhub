@@ -11,6 +11,7 @@ from app.services.user_service import (
     delete_user as service_delete_user,
 )
 from app.exceptions.user import UserAlreadyExistsError
+from app.security.auth import require_role
 
 router = APIRouter()
 
@@ -63,7 +64,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/users",response_model=User,status_code=201)
-def post_user(user: CreateUser, db: Session = Depends(get_db)):
+def post_user(user: CreateUser, db: Session = Depends(get_db), authorized_user = Depends(require_role("admin"))):
     try:
         created_user = service_create_user(user,db)
         return created_user
