@@ -1,7 +1,7 @@
 from os import getenv
 from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
-from jwt import encode
+from jwt import encode, decode, ExpiredSignatureError, InvalidTokenError
 
 load_dotenv()
 secret_key = getenv("SECRET_KEY")
@@ -22,3 +22,25 @@ def create_access_token(user_id: int, user_role: str) -> str:
     }
     token = encode(payload, secret_key, algorithm=ALGORITHM)
     return token
+
+def decode_access_token(token: str):
+    try:
+        decoded_token = decode(
+            token,
+            secret_key,
+            algorithms=[ALGORITHM]
+        )
+        
+        return {
+            'role':decoded_token["role"],
+            'id': decoded_token["sub"]
+        }
+    
+    except ExpiredSignatureError:
+        return None
+    
+    except InvalidTokenError:
+        return None
+
+
+        
