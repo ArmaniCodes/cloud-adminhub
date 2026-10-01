@@ -11,17 +11,17 @@ from app.services.user_service import (
     delete_user as service_delete_user,
 )
 from app.exceptions.user import UserAlreadyExistsError
-from app.security.auth import require_role
+from app.security.auth import require_role, get_current_user
 
 router = APIRouter()
 
 @router.get("/users", response_model=list[User])
-def get_users(db: Session = Depends(get_db)):
+def get_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return list_users(db)
 
 
 @router.get("/users/{user_id}",response_model=User)
-def get_user_by_id(user_id: int,  db: Session = Depends(get_db)):
+def get_user_by_id(user_id: int,  db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     
     user = service_get_user_by_id(user_id, db)
     
@@ -33,7 +33,7 @@ def get_user_by_id(user_id: int,  db: Session = Depends(get_db)):
 
 
 @router.patch("/users/{user_id}", response_model = User)
-def update_user(user_id: int, user_update: UpdateUser, db: Session = Depends(get_db)):
+def update_user(user_id: int, user_update: UpdateUser, db: Session = Depends(get_db), authorized_user = Depends(require_role("admin"))):
     
     try:
         user = service_update_user(user_id, user_update, db)
@@ -53,7 +53,7 @@ def update_user(user_id: int, user_update: UpdateUser, db: Session = Depends(get
    
 
 @router.delete("/users/{user_id}",response_model = User)
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(user_id: int, db: Session = Depends(get_db), authorized_user = Depends(require_role("admin"))):
     user = service_delete_user(user_id,db)
     if not user:
             raise HTTPException(
