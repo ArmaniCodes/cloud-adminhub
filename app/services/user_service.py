@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.schemas.user import CreateUser, UpdateUser, UserRole
+from app.schemas.user import CreateUser, UpdateUser, UserRole,LoginUser
 from app.models.user import User as UserModel
 from sqlalchemy import select
 from app.exceptions.user import UserAlreadyExistsError
@@ -64,3 +64,20 @@ def list_users(db: Session):
     stmt = select(UserModel)
     users = db.scalars(stmt).all()
     return users
+
+def get_user_by_email(user_email: str, db: Session):
+    stmt = select(UserModel).filter_by(email=user_email)
+    user = db.scalar(stmt)
+    return user
+
+def authenticate_user(login: LoginUser, db: Session):
+    # login.email is an emailstr so we must type cast
+    user = get_user_by_email( str(login.email), db)
+    if not user:
+        return None
+
+    if verify_password(login.password, user.password_hash):
+        return user
+    else:
+        return None
+    

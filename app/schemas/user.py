@@ -27,3 +27,7 @@ class UpdateUser(BaseModel):
      email: Optional[EmailStr] = None
      role: Optional[UserRole] = None
      password: Optional[str] = None
+
+class LoginUser(BaseModel):
+      email: EmailStr
+      password: str
