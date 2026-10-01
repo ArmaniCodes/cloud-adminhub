@@ -9,7 +9,7 @@ from app.security.password import hash_password, verify_password
 def create_user(user: CreateUser, db: Session):
     userm = UserModel(
             name = user.name,
-            email = user.email,
+            email = str(user.email).lower(),
             role = user.role.value,
             password_hash = hash_password(user.password)
         )
@@ -33,6 +33,9 @@ def update_user(user_id: int, updated_info: UpdateUser, db: Session):
     
     user_input = updated_info.model_dump(exclude_unset=True)
 
+    # Normalize email
+    if "email" in user_input:
+        user_input["email"] = str(user_input["email"]).lower()
     # Ensure role and password get updated correctly
     if "role" in user_input and isinstance(user_input["role"], UserRole):
         user_input["role"] = user_input["role"].value
@@ -71,13 +74,13 @@ def get_user_by_email(user_email: str, db: Session):
     return user
 
 def authenticate_user(login: LoginUser, db: Session):
-    # login.email is an emailstr so we must type cast
-    user = get_user_by_email( str(login.email), db)
+    # Normalize email for database lookup
+    user = get_user_by_email( str(login.email).lower(), db)
     if not user:
         return None
 
     if verify_password(login.password, user.password_hash):
         return user
-    else:
-        return None
+    
+    return None
     
