@@ -35,3 +35,4 @@ class LoginUser(BaseModel):
 class LoginResponse(BaseModel):
       access_token: str
       token_type: str
+      refresh_token: str
