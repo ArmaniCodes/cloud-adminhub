@@ -1,10 +1,11 @@
 from sqlalchemy.orm import Session
-from app.schemas.user import CreateUser, UpdateUser, UserRole,LoginUser
+from app.schemas.user import CreateUser, UpdateUser, UserRole,LoginUser, LoginResponse
 from app.models.user import User as UserModel
 from sqlalchemy import select
 from app.exceptions.user import UserAlreadyExistsError
 from sqlalchemy.exc import IntegrityError
 from app.security.password import hash_password, verify_password
+from app.security.token import create_access_token
 
 def create_user(user: CreateUser, db: Session):
     userm = UserModel(
@@ -80,7 +81,12 @@ def authenticate_user(login: LoginUser, db: Session):
         return None
 
     if verify_password(login.password, user.password_hash):
-        return user
-    
+        token = create_access_token(user.id, user.role)
+        token_type = "Bearer"
+        return LoginResponse(
+            access_token = token, 
+            token_type = token_type
+        )
+
     return None
     

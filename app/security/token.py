@@ -2,6 +2,8 @@ from os import getenv
 from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 from jwt import encode, decode, ExpiredSignatureError, InvalidTokenError
+import secrets
+from hashlib import sha256
 
 load_dotenv()
 secret_key = getenv("SECRET_KEY")
@@ -42,5 +44,12 @@ def decode_access_token(token: str):
     except InvalidTokenError:
         return None
 
+def hash_refresh_token(token: str) -> str:
+    token_bytes = token.encode()
+    digest = sha256(token_bytes)
+    return digest.hexdigest()
 
-        
+
+def create_refresh_token() -> str:
+    token = secrets.token_urlsafe(32)
+    return token
