@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy import ForeignKey, UniqueConstraint, DateTime
 from app.models.base import Base
 from datetime import datetime
 
@@ -16,5 +16,5 @@ class RefreshToken(Base):
         nullable=False
     )
     token_hash: Mapped[str] = mapped_column(nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked: Mapped[bool] = mapped_column(nullable = False, default=False)

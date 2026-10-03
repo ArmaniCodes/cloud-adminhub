@@ -7,6 +7,7 @@ from app.models.user import User as UserModel
 from sqlalchemy.orm import Session
 from app.services.user_service import get_user_by_email
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 
 def store_refresh_token(user: UserModel, refresh_token_hash: str, db: Session):
     refresh_token = RefreshToken(
@@ -44,4 +45,20 @@ def authenticate_user(login: LoginUser, db: Session):
         )
 
     return None
+
+
+def get_refresh_token(refresh_token: str, db: Session):
+    token_hash = hash_refresh_token(refresh_token)
+    stmt = select(RefreshToken).filter_by(token_hash = token_hash)
+    refresh_token_orm = db.scalar(stmt)
+    return refresh_token_orm
+
+def validate_refresh_token(refresh_token: str, db: Session):
+    refresh_token_orm = get_refresh_token(refresh_token,db)
+    if (not refresh_token_orm
+        or refresh_token_orm.revoked
+        or refresh_token_orm.expires_at <= datetime.now(timezone.utc)
+    ):
+        return None
     
+    return refresh_token_orm

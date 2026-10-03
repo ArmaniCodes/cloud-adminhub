@@ -1,4 +1,3 @@
-from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException,APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
