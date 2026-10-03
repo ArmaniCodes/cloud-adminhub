@@ -95,3 +95,16 @@ def refresh_token(refresh_token: str, db: Session):
         token_type = "Bearer",
         refresh_token = new_refresh_token
     )
+
+def revoke_refresh_token(refresh_token: str, db: Session):
+    refresh_token_orm = validate_refresh_token(refresh_token, db)
+    if not refresh_token_orm:
+        return False
+    refresh_token_orm.revoked = True
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise
+    return True
+    
