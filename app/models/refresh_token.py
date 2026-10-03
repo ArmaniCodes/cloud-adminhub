@@ -18,3 +18,4 @@ class RefreshToken(Base):
     token_hash: Mapped[str] = mapped_column(nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked: Mapped[bool] = mapped_column(nullable = False, default=False)
+
