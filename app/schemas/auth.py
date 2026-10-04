@@ -12,3 +12,7 @@ class LoginResponse(BaseModel):
       access_token: str
       token_type: str
       refresh_token: str   
+
+class ChangePasswordRequest(BaseModel):
+     current_password: str
+     new_password: str

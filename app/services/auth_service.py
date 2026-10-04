@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from app.security.token import create_access_token, create_refresh_token, hash_refresh_token
-from app.security.password import verify_password
-from app.schemas.auth import LoginUser, LoginResponse
+from app.security.password import verify_password, hash_password
+from app.schemas.auth import LoginUser, LoginResponse, ChangePasswordRequest
 from app.models.refresh_token import RefreshToken
 from app.models.user import User as UserModel
 from sqlalchemy.orm import Session
@@ -43,16 +43,14 @@ def authenticate_user(login: LoginUser, db: Session):
 
     return None
 
-def revoke_all_user_refresh_tokens(user_id: int, db: Session):
+def get_all_unrevoked_user_refresh_tokens(user_id: int, db: Session):
     stmt = select(RefreshToken).where(
         RefreshToken.user_id == user_id,
         RefreshToken.revoked.is_(False)
     )
     entries = db.scalars(stmt).all()
-    with transaction(db):
-        for entry in entries:
-            entry.revoked = True
-    
+    return entries
+
 
 def get_refresh_token(refresh_token: str, db: Session):
     token_hash = hash_refresh_token(refresh_token)
@@ -70,10 +68,12 @@ def validate_refresh_token(refresh_token: str, db: Session):
         return None
 
     if refresh_token_orm.revoked:
-        revoke_all_user_refresh_tokens(
-            refresh_token_orm.user_id,
-            db
+        entries = get_all_unrevoked_user_refresh_tokens(
+            refresh_token_orm.user_id, db
         )
+        with transaction(db):
+            for entry in entries:
+                entry.revoked = True
         return None
         
     if is_refresh_token_expired(refresh_token_orm):
@@ -117,4 +117,17 @@ def revoke_refresh_token(refresh_token: str, db: Session):
     with transaction(db):
         refresh_token_orm.revoked = True
     return True
-    
+
+def change_password(password_details: ChangePasswordRequest,current_user: UserModel, db: Session) -> bool:
+    if verify_password(
+        password_details.current_password,
+        current_user.password_hash
+    ):
+         entries = get_all_unrevoked_user_refresh_tokens(current_user.id,db)
+         with transaction(db):
+            current_user.password_hash = hash_password(password_details.new_password)
+            for entry in entries:
+                entry.revoked = True
+         return True
+    return False
+       
