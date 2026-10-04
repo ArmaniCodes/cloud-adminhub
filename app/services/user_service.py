@@ -33,9 +33,6 @@ def normalize_user(user_input: dict) -> None:
         user_input["email"] = str(user_input["email"]).lower()
     if "role" in user_input and isinstance(user_input["role"], UserRole):
         user_input["role"] = user_input["role"].value
-    if "password" in user_input:
-        user_input["password_hash"] = hash_password(user_input["password"])
-        del user_input["password"]
 
 def update_user(user_id: int, updated_info: UpdateUser, db: Session):
     user = db.get(UserModel,user_id)
