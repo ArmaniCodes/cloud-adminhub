@@ -6,21 +6,32 @@ from app.exceptions.user import UserAlreadyExistsError
 from sqlalchemy.exc import IntegrityError
 from app.security.password import hash_password
 from app.database import transaction
+from app.services.audit_service import create_audit_log
 
-def create_user(user: CreateUser, db: Session):
+def create_user(user: CreateUser, actor_user_id: int, db: Session):
     userm = UserModel(
             name = user.name,
             email = str(user.email).lower(),
             role = user.role.value,
             password_hash = hash_password(user.password)
         )
+    
     try:
         with transaction(db):
             db.add(userm)
+            db.flush()
+            create_audit_log(
+                actor_user_id,
+                "USER_CREATED",
+                userm.id, 
+                f'Created user with role {userm.role}'
+                , db
+            )
     except IntegrityError:
         raise UserAlreadyExistsError()
     
     db.refresh(userm)
+
     return userm
 
 def get_user_by_id(user_id: int, db: Session):

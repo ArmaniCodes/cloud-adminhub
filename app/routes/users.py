@@ -65,7 +65,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db), authorized_user = D
 @router.post("/users",response_model=User,status_code=201)
 def post_user(user: CreateUser, db: Session = Depends(get_db), authorized_user = Depends(require_role("admin"))):
     try:
-        created_user = service_create_user(user,db)
+        created_user = service_create_user(user,authorized_user.id,db)
         return created_user
     except UserAlreadyExistsError:
         raise HTTPException(
