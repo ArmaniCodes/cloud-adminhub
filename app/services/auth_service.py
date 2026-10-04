@@ -43,6 +43,16 @@ def authenticate_user(login: LoginUser, db: Session):
 
     return None
 
+def revoke_all_user_refresh_tokens(user_id: int, db: Session):
+    stmt = select(RefreshToken).where(
+        RefreshToken.user_id == user_id,
+        RefreshToken.revoked.is_(False)
+    )
+    entries = db.scalars(stmt).all()
+    with transaction(db):
+        for entry in entries:
+            entry.revoked = True
+    
 
 def get_refresh_token(refresh_token: str, db: Session):
     token_hash = hash_refresh_token(refresh_token)
@@ -50,14 +60,25 @@ def get_refresh_token(refresh_token: str, db: Session):
     refresh_token_orm = db.scalar(stmt)
     return refresh_token_orm
 
+def is_refresh_token_expired(refresh_token_orm: RefreshToken) -> bool:
+    return refresh_token_orm.expires_at <= datetime.now(timezone.utc)
+
 def validate_refresh_token(refresh_token: str, db: Session):
     refresh_token_orm = get_refresh_token(refresh_token,db)
-    if (not refresh_token_orm
-        or refresh_token_orm.revoked
-        or refresh_token_orm.expires_at <= datetime.now(timezone.utc)
-    ):
-        return None
     
+    if not refresh_token_orm:
+        return None
+
+    if refresh_token_orm.revoked:
+        revoke_all_user_refresh_tokens(
+            refresh_token_orm.user_id,
+            db
+        )
+        return None
+        
+    if is_refresh_token_expired(refresh_token_orm):
+        return None
+        
     return refresh_token_orm
 
 def get_user_by_refresh_token(refresh_token_orm: RefreshToken, db: Session):
@@ -73,8 +94,7 @@ def refresh_token(refresh_token: str, db: Session):
 
     if not refresh_token_orm or not user:
         return None
-    
-    
+
     access_token = create_access_token(user.id, user.role)
     new_refresh_token = create_refresh_token()
     new_hashed_token = hash_refresh_token(new_refresh_token)
