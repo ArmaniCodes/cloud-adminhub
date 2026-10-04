@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.schemas.auth import LoginUser, LoginResponse,RefreshTokenRequest
+from app.models.user import User as UserModel
+from app.schemas.user import User
 from app.database import get_db
+from app.security.auth import get_current_user
 from app.services.auth_service import authenticate_user as service_authenticate, refresh_token as service_refresh_token, revoke_refresh_token
 router = APIRouter()
 
@@ -26,3 +29,10 @@ def log_out(request: RefreshTokenRequest, db: Session = Depends(get_db)):
     if not revoke_refresh_token(request.refresh_token,db):
         raise HTTPException(status_code=401,detail="Invalid or expired refresh token" )
     return True
+
+@router.get("/auth/me", response_model=User)
+def get_me(current_user: UserModel = Depends(get_current_user)):
+    return current_user
+            
+           
+    
