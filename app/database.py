@@ -1,11 +1,12 @@
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from app.models.base import Base
 # Loads user model and register its table with Base.metadata
 from app.models.user import User as UserModel 
- 
+from contextlib import contextmanager
+
 load_dotenv()
 database_url = os.getenv("DATABASE_URL")
 
@@ -26,3 +27,12 @@ def get_db():
         yield db
     finally:
         db.close()
+
+@contextmanager
+def transaction(db: Session):
+    try:
+        yield
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise

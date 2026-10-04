@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.services.user_service import get_user_by_email, get_user_by_id
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
+from app.database import transaction
 
 def build_refresh_token(user: UserModel, refresh_token_hash: str):
     refresh_token = RefreshToken(
@@ -31,12 +32,9 @@ def authenticate_user(login: LoginUser, db: Session):
         refresh_token = create_refresh_token()
         refresh_token_hash = hash_refresh_token(refresh_token)
         refresh_token_orm = build_refresh_token(user,refresh_token_hash)
-        db.add(refresh_token_orm)
-        try:
-            db.commit()
-        except IntegrityError:
-            db.rollback()
-            raise
+        
+        with transaction(db):
+            db.add(refresh_token_orm)
 
         return LoginResponse(
             access_token = token, 
@@ -77,18 +75,15 @@ def refresh_token(refresh_token: str, db: Session):
     if not refresh_token_orm or not user:
         return None
     
-    refresh_token_orm.revoked = True
+    
     access_token = create_access_token(user.id, user.role)
     new_refresh_token = create_refresh_token()
     new_hashed_token = hash_refresh_token(new_refresh_token)
     new_refresh_token_orm = build_refresh_token(user,new_hashed_token)
-    
-    db.add(new_refresh_token_orm)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise
+
+    with transaction(db):
+        refresh_token_orm.revoked = True
+        db.add(new_refresh_token_orm)
 
     return LoginResponse(
         access_token = access_token, 
@@ -100,11 +95,7 @@ def revoke_refresh_token(refresh_token: str, db: Session):
     refresh_token_orm = validate_refresh_token(refresh_token, db)
     if not refresh_token_orm:
         return False
-    refresh_token_orm.revoked = True
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise
+    with transaction(db):
+        refresh_token_orm.revoked = True
     return True
     
