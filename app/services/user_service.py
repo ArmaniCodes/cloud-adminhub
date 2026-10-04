@@ -5,7 +5,7 @@ from sqlalchemy import select
 from app.exceptions.user import UserAlreadyExistsError
 from sqlalchemy.exc import IntegrityError
 from app.security.password import hash_password
-
+from app.database import transaction
 
 def create_user(user: CreateUser, db: Session):
     userm = UserModel(
@@ -14,12 +14,12 @@ def create_user(user: CreateUser, db: Session):
             role = user.role.value,
             password_hash = hash_password(user.password)
         )
-    db.add(userm)
     try:
-        db.commit()
+        with transaction(db):
+            db.add(userm)
     except IntegrityError:
-        db.rollback()
         raise UserAlreadyExistsError()
+    
     db.refresh(userm)
     return userm
 
@@ -27,32 +27,31 @@ def get_user_by_id(user_id: int, db: Session):
     user = db.get(UserModel,user_id)
     return user
 
-def update_user(user_id: int, updated_info: UpdateUser, db: Session):
-    user = db.get(UserModel,user_id)
-    if not user:
-        return None
-    
-    user_input = updated_info.model_dump(exclude_unset=True)
-
+def normalize_user(user_input: dict) -> None:
     # Normalize email
     if "email" in user_input:
         user_input["email"] = str(user_input["email"]).lower()
-    # Ensure role and password get updated correctly
     if "role" in user_input and isinstance(user_input["role"], UserRole):
         user_input["role"] = user_input["role"].value
     if "password" in user_input:
         user_input["password_hash"] = hash_password(user_input["password"])
         del user_input["password"]
 
-    for k,v in user_input.items():
-        setattr(user,k,v)
+def update_user(user_id: int, updated_info: UpdateUser, db: Session):
+    user = db.get(UserModel,user_id)
+    if not user:
+        return None
     
+    user_input = updated_info.model_dump(exclude_unset=True)
+    normalize_user(user_input)
+
     try:
-        db.commit()
+        with transaction(db):
+            for k,v in user_input.items():
+                setattr(user,k,v)
     except IntegrityError:
-        db.rollback()
         raise UserAlreadyExistsError()
-    
+
     db.refresh(user)
     return user 
 
@@ -60,8 +59,8 @@ def delete_user(user_id: int, db: Session):
     user = db.get(UserModel,user_id)
     if not user:
         return None
-    db.delete(user)
-    db.commit()
+    with transaction(db):
+        db.delete(user)
     return user
 
 def list_users(db: Session):

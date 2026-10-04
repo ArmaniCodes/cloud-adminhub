@@ -6,7 +6,6 @@ from app.models.refresh_token import RefreshToken
 from app.models.user import User as UserModel
 from sqlalchemy.orm import Session
 from app.services.user_service import get_user_by_email, get_user_by_id
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from app.database import transaction
 
