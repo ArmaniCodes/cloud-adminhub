@@ -45,7 +45,8 @@ def normalize_user(user_input: dict) -> None:
     if "role" in user_input and isinstance(user_input["role"], UserRole):
         user_input["role"] = user_input["role"].value
 
-def update_user(user_id: int, updated_info: UpdateUser, db: Session):
+
+def update_user(user_id: int, updated_info: UpdateUser, actor_user_id: int, db: Session):
     user = db.get(UserModel,user_id)
     if not user:
         return None
@@ -53,15 +54,29 @@ def update_user(user_id: int, updated_info: UpdateUser, db: Session):
     user_input = updated_info.model_dump(exclude_unset=True)
     normalize_user(user_input)
 
+    if not user_input:
+        return user
+
+   
     try:
         with transaction(db):
-            for k,v in user_input.items():
-                setattr(user,k,v)
+            audit_details = ""
+
+            for k, v in user_input.items():
+                old_value = getattr(user, k, None)
+                if old_value != v:
+                    audit_details += f"Changed {k} from {old_value} to {v}; "
+                    setattr(user, k, v)
+
+            if audit_details:
+                create_audit_log(actor_user_id, "USER_UPDATED", user.id, audit_details, db )
+
     except IntegrityError:
         raise UserAlreadyExistsError()
 
     db.refresh(user)
     return user 
+
 
 def delete_user(user_id: int, db: Session):
     user = db.get(UserModel,user_id)

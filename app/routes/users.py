@@ -35,7 +35,7 @@ def get_user_by_id(user_id: int,  db: Session = Depends(get_db), current_user: U
 def update_user(user_id: int, user_update: UpdateUser, db: Session = Depends(get_db), authorized_user = Depends(require_role("admin"))):
     
     try:
-        user = service_update_user(user_id, user_update, db)
+        user = service_update_user(user_id, user_update,authorized_user.id, db)
         if not user:
             raise HTTPException(
              status_code=404, 
