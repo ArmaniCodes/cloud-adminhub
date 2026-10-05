@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.services.user_service import get_user_by_email, get_user_by_id
 from sqlalchemy import select
 from app.database import transaction
+from app.services.audit_service import create_audit_log
 
 def build_refresh_token(user: UserModel, refresh_token_hash: str):
     refresh_token = RefreshToken(
@@ -128,6 +129,8 @@ def change_password(password_details: ChangePasswordRequest,current_user: UserMo
             current_user.password_hash = hash_password(password_details.new_password)
             for entry in entries:
                 entry.revoked = True
+            create_audit_log(current_user.id, "PASSWORD_CHANGED", current_user.id, "Password changed; all active refresh sessions revoked",db)
+
          return True
     return False
        
