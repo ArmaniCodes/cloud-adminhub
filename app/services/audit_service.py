@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import select,desc
 from app.models.audit import AuditLog
 
 def create_audit_log(
@@ -13,3 +14,7 @@ def create_audit_log(
     return audit_log
 
 
+def list_audit_logs(db: Session):
+    stmt = select(AuditLog).order_by(desc(AuditLog.created_at))
+    audits = db.scalars(stmt).all()
+    return audits
