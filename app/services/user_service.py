@@ -54,21 +54,26 @@ def update_user(user_id: int, updated_info: UpdateUser, actor_user_id: int, db: 
     user_input = updated_info.model_dump(exclude_unset=True)
     normalize_user(user_input)
 
-    if not user_input:
-        return user
+    # Filter input by only whats different from user orm
+    filtered_dict = {}
+    audit_details = ""
+    for k, v in user_input.items():
+        old_value = getattr(user, k, None)
+        if old_value != v:
+            filtered_dict[k] = v
+            audit_details += f"Changed {k} from {old_value} to {v}; "
     
+    if not filtered_dict:
+        return user
+
+    
+    audit_action = "USER_ROLE_UPDATED" if 'role' in filtered_dict else "USER_UPDATED"
+        
     try:
         with transaction(db):
-            audit_details = ""
-
-            for k, v in user_input.items():
-                old_value = getattr(user, k, None)
-                if old_value != v:
-                    audit_details += f"Changed {k} from {old_value} to {v}; "
-                    setattr(user, k, v)
-
-            if audit_details:
-                create_audit_log(actor_user_id, "USER_UPDATED", user.id, audit_details, db )
+            for k, v in filtered_dict.items():
+                setattr(user, k, v)
+            create_audit_log(actor_user_id, audit_action, user.id, audit_details, db )
 
     except IntegrityError:
         raise UserAlreadyExistsError()
