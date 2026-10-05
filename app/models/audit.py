@@ -16,8 +16,8 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(nullable=False)
     
     target_user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id"),
-        nullable=False
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
     )
     
     created_at: Mapped[datetime] =  mapped_column(

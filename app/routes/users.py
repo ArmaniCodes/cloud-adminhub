@@ -53,7 +53,7 @@ def update_user(user_id: int, user_update: UpdateUser, db: Session = Depends(get
 
 @router.delete("/users/{user_id}",response_model = User)
 def delete_user(user_id: int, db: Session = Depends(get_db), authorized_user = Depends(require_role("admin"))):
-    user = service_delete_user(user_id,db)
+    user = service_delete_user(user_id,authorized_user.id, db)
     if not user:
             raise HTTPException(
                  status_code=404, 

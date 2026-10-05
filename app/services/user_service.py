@@ -56,8 +56,7 @@ def update_user(user_id: int, updated_info: UpdateUser, actor_user_id: int, db: 
 
     if not user_input:
         return user
-
-   
+    
     try:
         with transaction(db):
             audit_details = ""
@@ -78,11 +77,18 @@ def update_user(user_id: int, updated_info: UpdateUser, actor_user_id: int, db: 
     return user 
 
 
-def delete_user(user_id: int, db: Session):
+def delete_user(user_id: int,actor_user_id, db: Session):
     user = db.get(UserModel,user_id)
+    
     if not user:
         return None
+
+    audit_details = (
+        f"USER_ID: {user.id} DELETED "
+        f"EMAIL: {user.email} with role {user.role}"
+    )
     with transaction(db):
+        create_audit_log(actor_user_id, "USER_DELETED", user.id, audit_details, db )
         db.delete(user)
     return user
 
