@@ -112,7 +112,7 @@ def refresh_token(refresh_token: str, db: Session):
     )
 
 def revoke_refresh_token(refresh_token: str, db: Session):
-    refresh_token_orm = validate_refresh_token(refresh_token, db)
+    refresh_token_orm = get_refresh_token(refresh_token, db)
     if not refresh_token_orm:
         return False
     with transaction(db):

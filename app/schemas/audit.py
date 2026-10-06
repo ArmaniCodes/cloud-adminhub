@@ -3,7 +3,7 @@ from datetime import datetime
 
 class AuditLogResponse(BaseModel):
     id: int
-    actor_user_id: int
+    actor_user_id: int | None
     action: str
     target_user_id: int | None
     created_at: datetime

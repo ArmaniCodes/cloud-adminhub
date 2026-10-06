@@ -31,7 +31,6 @@ def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
 def log_out(request: RefreshTokenRequest, db: Session = Depends(get_db)):
     if not revoke_refresh_token(request.refresh_token,db):
         raise HTTPException(status_code=401,detail="Invalid or expired refresh token" )
-    return True
 
 @router.get("/auth/me", response_model=User)
 def get_me(current_user: UserModel = Depends(get_current_user)):

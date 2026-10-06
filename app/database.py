@@ -4,7 +4,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from app.models.base import Base
 # Loads user model and register its table with Base.metadata
-from app.models.user import User as UserModel 
 from contextlib import contextmanager
 
 load_dotenv()
@@ -14,7 +13,6 @@ if not database_url:
     raise ValueError("database_url should not be None")
 
 engine = create_engine(database_url)
-Base.metadata.create_all(engine)
 
 SessionLocal = sessionmaker(
     bind=engine,

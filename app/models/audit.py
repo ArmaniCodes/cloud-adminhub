@@ -8,10 +8,14 @@ class AuditLog(Base):
     
     id: Mapped[int] = mapped_column(primary_key=True)
     
-    actor_user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id"),
-        nullable=False
-    )
+    actor_user_id: Mapped[int | None] = mapped_column(
+    ForeignKey(
+        "users.id",
+        name="fk_audit_logs_actor_user_id",
+        ondelete="SET NULL"
+    ),
+    nullable=True
+)
 
     action: Mapped[str] = mapped_column(nullable=False)
     
