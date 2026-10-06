@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional
 from enum import Enum
-
+from app.schemas.password import NewPassword
 # Allowed roles for users
 class UserRole(Enum):
     admin = "admin"
@@ -20,7 +20,7 @@ class CreateUser(BaseModel):
      name: str
      email: EmailStr
      role: UserRole
-     password: str
+     password: NewPassword
 
 class UpdateUser(BaseModel):
      name: Optional[str] = None
