@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from app.models.base import Base
 # Loads user model and register its table with Base.metadata
 from contextlib import contextmanager
 
