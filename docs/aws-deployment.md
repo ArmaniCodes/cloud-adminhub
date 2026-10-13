@@ -2,24 +2,38 @@
 
 Completed
 
-~~Created an IAM user named iamadmin with administrative permissions for infrastructure setup.~~
+~~Installed Terraform in the Ubuntu/WSL environment.~~
 
-~~Enabled MFA for iamadmin.~~
+~~Configured AWS CLI browser-based authentication using aws login.~~
 
-~~Created an AWS monthly cost budget with spending alerts.~~
+~~Verified the AWS identity using aws sts get-caller-identity.~~
 
-Configure the AWS CLI authentication method.
+~~Configured the cloudadminhub AWS CLI profile.~~
 
-Provision the project infrastructure using Terraform.
+~~Created a terraform-cloudadminhub profile that obtains credentials through the AWS CLI credential_process mechanism.~~
+
+~~Configured the Terraform profile to use us-east-1 (US East, N. Virginia).~~
+
+**Authentication**
+
+Terraform uses the terraform-cloudadminhub profile, which obtains temporary credentials through the cloudadminhub AWS CLI profile.
+
+Verify the authenticated identity:
+
+```aws sts get-caller-identity --profile terraform-cloudadminhub```
+
+The AWS CLI authentication session may expire and need to be renewed.
 
 **Security Notes**
 
-* Do not commit AWS access keys, secret keys, passwords, or other credentials.
+* Never commit AWS credentials, session tokens, access keys, or secret keys.
 
-* The application's AWS permissions will use dedicated IAM roles with least-privilege access.
+* Local AWS CLI profile configuration stays outside the project repository.
 
-* Cost budget notifications are alerts, not hard spending limits.
+* Do not embed credentials in Terraform files or infrastructure resources.
 
-* Deployment Region
+* Review terraform plan before applying infrastructure changes.
 
-* Planned region: US East (N. Virginia), us-east-1.
+**Next Milestone**
+
+Create the initial Terraform configuration and define the VPC networking architecture.
