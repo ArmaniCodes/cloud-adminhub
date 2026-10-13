@@ -150,6 +150,14 @@ activemq-data/
 # Docker
 .env.docker
 
+# Terraform working files and state
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
 # Environments
 .env
 .envrc
