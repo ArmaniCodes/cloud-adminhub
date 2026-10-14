@@ -1,8 +1,37 @@
+# Python virtual environments and caches
 .venv/
-.git/
-.env
+**/.venv/
 __pycache__/
+**/__pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Git and editor files
+.git/
 .vscode/
-.env.docker
+.idea/
+
+# Terraform working directories, state, and plans
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# Node dependencies, if present
+node_modules/
+**/node_modules/
+
+# Test and build artifacts
+.coverage
+htmlcov/
+dist/
+build/
