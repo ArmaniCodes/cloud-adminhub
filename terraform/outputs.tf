@@ -52,3 +52,23 @@ output "ecr_repository_arn" {
   description = "ARN of the Cloud AdminHub ECR repository"
   value       = aws_ecr_repository.api.arn
 }
+
+output "rds_endpoint" {
+  description = "Private DNS endpoint for Cloud AdminHub PostgreSQL"
+  value       = aws_db_instance.postgres.address
+}
+
+output "rds_port" {
+  description = "PostgreSQL connection port"
+  value       = aws_db_instance.postgres.port
+}
+
+output "rds_database_name" {
+  description = "Cloud AdminHub database name"
+  value       = aws_db_instance.postgres.db_name
+}
+
+output "rds_master_secret_arn" {
+  description = "ARN of the RDS-managed master password secret"
+  value       = aws_db_instance.postgres.master_user_secret[0].secret_arn
+}

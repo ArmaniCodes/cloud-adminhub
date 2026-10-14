@@ -150,6 +150,7 @@ terraform/
 ├── network.tf
 ├── security_groups.tf
 ├── ecr.tf
+├── rds.tf
 ├── outputs.tf
 ├── .terraform.lock.hcl
 └── bootstrap-state/
@@ -274,7 +275,7 @@ The VPC spans two Availability Zones and contains four subnets.
 
 The public route table provides a route to the Internet Gateway. The private route tables currently have no internet route. Public subnets do not automatically assign public IP addresses to launched instances.
 
-No NAT gateways, ECS services, load balancers, VPC endpoints, or RDS instances have been created yet.
+No NAT gateways, ECS services, load balancers, or VPC endpoints have been created yet. The RDS PostgreSQL instance is deployed in the private subnets.
 
 ### Verification
 
@@ -420,7 +421,72 @@ terraform plan
 
 The expected Terraform resources in state are `aws_ecr_repository.api` and `aws_ecr_lifecycle_policy.api`. The plan should report no changes when the deployed infrastructure matches the configuration.
 
-## 8. Deployment Roadmap
+## 8. Amazon RDS for PostgreSQL
+
+### Status: Deployed
+
+Terraform provisions a PostgreSQL database in the private subnets. The DB subnet group contains both private subnets in separate Availability Zones; the database itself is single-AZ for this development environment.
+
+| Setting | Value |
+|---|---|
+| DB instance identifier | `cloud-adminhub-postgres` |
+| Engine | PostgreSQL `16.15` |
+| Instance class | `db.t4g.micro` |
+| Database name | `cloud_adminhub` |
+| Master username | `cloudadminhub_admin` |
+| Port | `5432` |
+| Endpoint | `cloud-adminhub-postgres.ckvgy46sep04.us-east-1.rds.amazonaws.com` |
+| DB subnet group | `cloud-adminhub-db-subnet-group` |
+| Database security group | `sg-0e1854b33caba0cba` |
+| Public accessibility | Disabled |
+| Storage | 20 GiB gp3, encrypted |
+| Multi-AZ | Disabled (development configuration) |
+| Automated backup retention | 1 day |
+| Deletion protection | Enabled |
+| Master secret | Stored and managed by RDS in AWS Secrets Manager |
+| Master secret ARN | `arn:aws:secretsmanager:us-east-1:364503394646:secret:rds!db-d477a5c4-4926-456e-8830-9bd52300e8fd-YoNfqh` |
+
+The RDS endpoint is private; a machine outside the VPC cannot connect to it directly unless private network access is deliberately configured. The existing database security group allows PostgreSQL ingress from the application security group only. Do not open port 5432 to `0.0.0.0/0`.
+
+RDS manages the master password through Secrets Manager, so no database password is hardcoded in Terraform configuration. Do not retrieve the secret value for documentation or commit it to Git. The application should eventually use a separate, least-privilege database user rather than the RDS master user.
+
+### Backup and lifecycle notes
+
+- Storage encryption is enabled.
+- Automated backup retention is configured for one day, which is suitable only for this initial development setup and should be reviewed before production.
+- Deletion protection is enabled.
+- `skip_final_snapshot = false` requests a final snapshot on deletion. The configured final snapshot identifier must be changed to a new unique value if a later deletion/recreation would reuse an existing snapshot name.
+- RDS incurs ongoing charges while provisioned; check AWS billing and remove billable resources when they're no longer needed. Deletion protection must be explicitly disabled before Terraform can delete the instance.
+
+### Outputs and verification
+
+From the main `terraform/` directory:
+
+```bash
+terraform output rds_endpoint
+terraform output rds_port
+terraform output rds_database_name
+terraform output rds_master_secret_arn
+
+aws rds describe-db-instances \
+  --db-instance-identifier cloud-adminhub-postgres \
+  --region us-east-1 \
+  --query 'DBInstances[0].{Status:DBInstanceStatus,PubliclyAccessible:PubliclyAccessible,Encrypted:StorageEncrypted,DeletionProtection:DeletionProtection,Endpoint:Endpoint.Address}' \
+  --output table
+
+terraform plan
+```
+
+Verify that the RDS status is `available`, `PubliclyAccessible` is `False`, storage is encrypted, and deletion protection is enabled. The Terraform plan should show no changes when the deployed resources match the configuration.
+
+### Still required before application integration
+
+- [ ] Create a separate application database user with only the required privileges.
+- [ ] Configure private application access to the database and required AWS services.
+- [ ] Run Alembic migrations against RDS from a controlled environment inside the VPC or another secure path.
+- [ ] Verify database connectivity and migrations without exposing the database publicly.
+
+## 9. Deployment Roadmap
 
 The following milestones remain.
 
@@ -437,13 +503,15 @@ The following milestones remain.
 
 ### Milestone 2: Amazon RDS for PostgreSQL
 
-- [ ] Create a DB subnet group using the private subnets.
+- [x] Create a DB subnet group using the private subnets.
 - [x] Create the RDS security group and restrict PostgreSQL ingress to the app security group.
-- [ ] Provision PostgreSQL in private subnets.
-- [ ] Store database credentials in AWS Secrets Manager.
+- [x] Provision PostgreSQL in private subnets.
+- [x] Enable RDS-managed master password storage in Secrets Manager.
+- [x] Configure encrypted storage, backups, and deletion protection.
+- [x] Record the private endpoint and master secret ARN in this guide.
+- [ ] Create a least-privilege application database user.
 - [ ] Run Alembic migrations against RDS.
-- [ ] Verify database connectivity and migrations.
-- [ ] Document backup, deletion protection, and cost considerations.
+- [ ] Verify application connectivity and migrations.
 
 ### Milestone 3: ECS and Fargate
 
@@ -481,7 +549,7 @@ The following milestones remain.
 - [ ] Review infrastructure and deployment changes through Git.
 - [ ] Document rollback and troubleshooting procedures.
 
-## 9. Git Workflow and Documentation
+## 10. Git Workflow and Documentation
 
 Each meaningful milestone should be committed separately.
 
@@ -497,7 +565,7 @@ Recommended workflow:
 
 Never commit secrets, local environment files, Terraform state files, or temporary credentials.
 
-## 10. Current Status
+## 11. Current Status
 
 The following have been completed:
 
@@ -509,5 +577,6 @@ The following have been completed:
 - Four network security groups with restricted ALB-to-app, app-to-database, and app-to-endpoint traffic.
 - Private ECR repository with image scanning, immutable tags, and lifecycle cleanup policy.
 - Docker image `git-2c6bacd` pushed to ECR and verified by digest.
+- Private RDS for PostgreSQL with encrypted storage, RDS-managed master password in Secrets Manager, one-day automated backup retention, and deletion protection.
 
-**Next milestone:** prepare the private RDS for PostgreSQL deployment. Before provisioning it, decide how private workloads will access required AWS services and image/logging endpoints (VPC endpoints versus NAT), and review the database subnet group, credentials, backups, and deletion protection.
+**Next milestone:** establish private AWS service access for the future ECS tasks (VPC endpoints versus NAT), then prepare ECS/Fargate task roles and database connectivity. RDS is provisioned privately; application database user creation and Alembic migrations remain outstanding.
