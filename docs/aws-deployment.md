@@ -148,6 +148,7 @@ terraform/
 ├── variables.tf
 ├── main.tf
 ├── network.tf
+├── security_groups.tf
 ├── outputs.tf
 ├── .terraform.lock.hcl
 └── bootstrap-state/
@@ -268,11 +269,11 @@ The VPC spans two Availability Zones and contains four subnets.
 - [x] Public route table with a default route to the Internet Gateway.
 - [x] Private route table for each private subnet.
 - [x] Route table associations for all four subnets.
-- [x] Terraform outputs for the VPC ID, subnet IDs, and Availability Zones.
+- [x] Terraform outputs for the VPC ID, subnet IDs, Availability Zones, and security group IDs.
 
 The public route table provides a route to the Internet Gateway. The private route tables currently have no internet route. Public subnets do not automatically assign public IP addresses to launched instances.
 
-No NAT gateways, ECS services, load balancers, or RDS instances have been created in this phase.
+No NAT gateways, ECS services, load balancers, VPC endpoints, or RDS instances have been created yet.
 
 ### Verification
 
@@ -286,14 +287,52 @@ terraform plan
 
 The plan should report no changes when the deployed infrastructure matches the configuration.
 
-## 6. Deployment Roadmap
+## 6. Network Security Groups
+
+### Status: Deployed
+
+Terraform creates four security groups in VPC `vpc-07e99495df3b0366b`. They establish the intended traffic boundaries for the future load balancer, FastAPI tasks, database, and private AWS service endpoints.
+
+| Security group | Resource ID | Purpose |
+|---|---|---|
+| ALB | `sg-0340189952a96b1c8` | Public web entry point |
+| App | `sg-07505808890a04860` | FastAPI ECS tasks |
+| Database | `sg-0e1854b33caba0cba` | RDS PostgreSQL |
+| Endpoints | `sg-05a44d9f9d66e1265` | Future interface VPC endpoints |
+
+### Allowed Traffic
+
+| Source | Destination | Protocol / port | Purpose |
+|---|---|---|---|
+| Internet (`0.0.0.0/0`) | ALB security group | TCP 80 | HTTP entry to the load balancer |
+| ALB security group | App security group | TCP 8000 | Forward requests to FastAPI |
+| App security group | Database security group | TCP 5432 | PostgreSQL connections |
+| App security group | Endpoints security group | TCP 443 | HTTPS connections to future private AWS service endpoints |
+
+The corresponding destination ingress rules allow traffic only from the intended source security group, except for the ALB's public HTTP rule. The application and database ports are not directly open to the internet. The rules are defined as standalone Terraform ingress/egress rule resources in `security_groups.tf`.
+
+**Current limitations:** the ALB security group allows HTTP on port 80; HTTPS has not been configured yet. The endpoints security group is only a security group at this stage—the VPC endpoint resources themselves have not been created. Before ECS tasks can pull images, retrieve secrets, or publish logs without NAT, the required VPC endpoints and routes must be planned and deployed.
+
+### Verification
+
+From the main `terraform/` directory, confirm the outputs and managed resources:
+
+```bash
+terraform output
+terraform state list | grep security_group
+terraform plan
+```
+
+The plan should report no changes when the deployed infrastructure matches the configuration.
+
+## 7. Deployment Roadmap
 
 The following milestones remain.
 
 ### Milestone 1: Network Security and Container Registry
 
-- [ ] Create security groups for the future load balancer, API, and database.
-- [ ] Restrict inbound and inter-service traffic to the required ports.
+- [x] Create security groups for the future load balancer, API, database, and endpoints.
+- [x] Restrict inbound and inter-service traffic to the required ports.
 - [ ] Create an Amazon ECR repository.
 - [ ] Build, tag, and push the AdminHub Docker image to ECR.
 - [ ] Document image publishing and verification commands.
@@ -301,7 +340,7 @@ The following milestones remain.
 ### Milestone 2: Amazon RDS for PostgreSQL
 
 - [ ] Create a DB subnet group using the private subnets.
-- [ ] Create the RDS security group.
+- [x] Create the RDS security group and restrict PostgreSQL ingress to the app security group.
 - [ ] Provision PostgreSQL in private subnets.
 - [ ] Store database credentials in AWS Secrets Manager.
 - [ ] Run Alembic migrations against RDS.
@@ -344,7 +383,7 @@ The following milestones remain.
 - [ ] Review infrastructure and deployment changes through Git.
 - [ ] Document rollback and troubleshooting procedures.
 
-## 7. Git Workflow and Documentation
+## 8. Git Workflow and Documentation
 
 Each meaningful milestone should be committed separately.
 
@@ -360,7 +399,7 @@ Recommended workflow:
 
 Never commit secrets, local environment files, Terraform state files, or temporary credentials.
 
-## 8. Current Status
+## 9. Current Status
 
 The following have been completed:
 
@@ -369,5 +408,6 @@ The following have been completed:
 - AWS CLI authentication and Terraform setup.
 - Remote Terraform state with separate bootstrap and main state keys.
 - VPC, Internet Gateway, public/private subnets, and routing.
+- Four network security groups with restricted ALB-to-app, app-to-database, and app-to-endpoint traffic.
 
-**Next milestone:** create security groups and an Amazon ECR repository, then begin preparing the private RDS deployment.
+**Next milestone:** create an Amazon ECR repository and push the container image. Then prepare the private RDS deployment, including outbound access through suitable VPC endpoints or NAT as required.
