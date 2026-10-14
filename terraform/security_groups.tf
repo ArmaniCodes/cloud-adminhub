@@ -119,3 +119,15 @@ resource "aws_vpc_security_group_ingress_rule" "endpoints_from_app" {
 
   description = "Allow HTTPS from FastAPI to private AWS service endpoints"
 }
+
+
+resource "aws_vpc_security_group_egress_rule" "app_to_s3" {
+  security_group_id = aws_security_group.app.id
+
+  description    = "Allow HTTPS to S3 for ECR image layers"
+  prefix_list_id = data.aws_prefix_list.s3.id
+
+  ip_protocol = "tcp"
+  from_port   = 443
+  to_port     = 443
+}

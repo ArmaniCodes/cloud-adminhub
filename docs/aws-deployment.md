@@ -151,6 +151,7 @@ terraform/
 ├── security_groups.tf
 ├── ecr.tf
 ├── rds.tf
+├── endpoints.tf
 ├── outputs.tf
 ├── .terraform.lock.hcl
 └── bootstrap-state/
@@ -275,7 +276,7 @@ The VPC spans two Availability Zones and contains four subnets.
 
 The public route table provides a route to the Internet Gateway. The private route tables currently have no internet route. Public subnets do not automatically assign public IP addresses to launched instances.
 
-No NAT gateways, ECS services, load balancers, or VPC endpoints have been created yet. The RDS PostgreSQL instance is deployed in the private subnets.
+No NAT gateways, ECS services, or load balancers have been created yet. The RDS PostgreSQL instance is deployed in the private subnets. Four interface VPC endpoints and one S3 gateway endpoint are now deployed for private access to required AWS services.
 
 ### Verification
 
@@ -300,7 +301,7 @@ Terraform creates four security groups in VPC `vpc-07e99495df3b0366b`. They esta
 | ALB | `sg-0340189952a96b1c8` | Public web entry point |
 | App | `sg-07505808890a04860` | FastAPI ECS tasks |
 | Database | `sg-0e1854b33caba0cba` | RDS PostgreSQL |
-| Endpoints | `sg-05a44d9f9d66e1265` | Future interface VPC endpoints |
+| Endpoints | `sg-05a44d9f9d66e1265` | Interface VPC endpoints |
 
 ### Allowed Traffic
 
@@ -313,7 +314,7 @@ Terraform creates four security groups in VPC `vpc-07e99495df3b0366b`. They esta
 
 The corresponding destination ingress rules allow traffic only from the intended source security group, except for the ALB's public HTTP rule. The application and database ports are not directly open to the internet. The rules are defined as standalone Terraform ingress/egress rule resources in `security_groups.tf`.
 
-**Current limitations:** the ALB security group allows HTTP on port 80; HTTPS has not been configured yet. The endpoints security group is only a security group at this stage—the VPC endpoint resources themselves have not been created. Before ECS tasks can pull images, retrieve secrets, or publish logs without NAT, the required VPC endpoints and routes must be planned and deployed.
+**Current limitations:** the ALB security group allows HTTP on port 80; HTTPS has not been configured yet. The endpoints security group is attached to the four interface endpoints described in the private VPC endpoints section. Private AWS service access is now configured without a NAT gateway. HTTPS to the regional S3 prefix list is explicitly allowed from the application security group for ECR image-layer downloads.
 
 ### Verification
 
@@ -486,7 +487,53 @@ Verify that the RDS status is `available`, `PubliclyAccessible` is `False`, stor
 - [ ] Run Alembic migrations against RDS from a controlled environment inside the VPC or another secure path.
 - [ ] Verify database connectivity and migrations without exposing the database publicly.
 
-## 9. Deployment Roadmap
+## 9. Private VPC Endpoints
+
+### Status: Deployed
+
+Five VPC endpoints have been created so workloads in the private subnets can access the AWS services required for an ECS/Fargate deployment without a NAT gateway.
+
+| Endpoint service | Endpoint type | Intended use | Status verified |
+|---|---|---|---|
+| `com.amazonaws.us-east-1.ecr.api` | Interface | ECR API and registry metadata | `available` |
+| `com.amazonaws.us-east-1.ecr.dkr` | Interface | Docker registry access for image pulls | `available` |
+| `com.amazonaws.us-east-1.secretsmanager` | Interface | Retrieve the RDS-managed master secret at task startup | `available` |
+| `com.amazonaws.us-east-1.logs` | Interface | Publish container logs to CloudWatch Logs | `available` |
+| `com.amazonaws.us-east-1.s3` | Gateway | Download ECR image layers stored in S3 | `available` |
+
+### Configuration
+
+- The four interface endpoints are deployed in both private subnets across the two Availability Zones.
+- Private DNS is enabled for the interface endpoints.
+- The interface endpoints use the existing endpoints security group, `sg-05a44d9f9d66e1265`, which allows HTTPS ingress from the application security group.
+- The S3 gateway endpoint is associated with both private route tables.
+- The application security group has an HTTPS egress rule to the AWS-managed regional S3 prefix list (`pl-63a5400a`) for image-layer access.
+- No NAT gateway has been created. Private workloads can access these listed AWS services through VPC endpoints, but they do not have general internet egress.
+
+### Cost and teardown planning
+
+Interface endpoints incur hourly charges for each endpoint in each Availability Zone, in addition to applicable data-processing charges. With four interface endpoint services across two Availability Zones, the approximate baseline at the previously estimated rate is about $58.40 per 730-hour month, before data processing and other AWS charges. The S3 gateway endpoint has no hourly endpoint charge. These are estimates, not a bill guarantee; check current regional pricing and Cost Explorer.
+
+This project is intended to run only long enough to validate the architecture. After end-to-end testing, remove chargeable runtime resources rather than leaving them running. Keep the Terraform configuration and remote state so the environment can be recreated. Before teardown, retain any data or database snapshot you need, explicitly disable RDS deletion protection, and review the planned destruction carefully. Removing the RDS instance, interface endpoints, load balancer, and ECS resources is a separate operation from simply stopping application tasks.
+
+### Verification
+
+From the main `terraform/` directory:
+
+```bash
+aws ec2 describe-vpc-endpoints \
+  --filters "Name=vpc-id,Values=$(terraform output -raw vpc_id)" \
+  --region us-east-1 \
+  --query 'VpcEndpoints[].{Service:ServiceName,State:State,Type:VpcEndpointType}' \
+  --output table
+
+terraform state list | grep vpc_endpoint
+terraform plan
+```
+
+The five endpoints were verified as `available`: four interface endpoints and one S3 gateway endpoint. The plan should report no changes when deployed resources match the configuration.
+
+## 10. Deployment Roadmap
 
 The following milestones remain.
 
@@ -513,7 +560,14 @@ The following milestones remain.
 - [ ] Run Alembic migrations against RDS.
 - [ ] Verify application connectivity and migrations.
 
-### Milestone 3: ECS and Fargate
+### Milestone 3: Private AWS Service Access
+
+- [x] Create interface endpoints for ECR API, ECR Docker Registry, Secrets Manager, and CloudWatch Logs in both private subnets.
+- [x] Create an S3 gateway endpoint associated with both private route tables.
+- [x] Permit application HTTPS egress to the regional S3 prefix list.
+- [x] Verify all five endpoints are `available`.
+
+### Milestone 4: ECS and Fargate
 
 - [ ] Create an ECS cluster.
 - [ ] Define the task execution role and application task role.
@@ -523,7 +577,7 @@ The following milestones remain.
 - [ ] Deploy the FastAPI service in private subnets.
 - [ ] Verify health checks and database connectivity.
 
-### Milestone 4: Application Load Balancer
+### Milestone 5: Application Load Balancer
 
 - [ ] Create an Application Load Balancer in the public subnets.
 - [ ] Configure target groups and health checks.
@@ -531,7 +585,7 @@ The following milestones remain.
 - [ ] Configure HTTPS and a domain if available.
 - [ ] Test the deployed API endpoints.
 
-### Milestone 5: Monitoring and Operational Security
+### Milestone 6: Monitoring and Operational Security
 
 - [ ] Configure CloudWatch log retention.
 - [ ] Add useful metrics and alarms.
@@ -540,7 +594,7 @@ The following milestones remain.
 - [ ] Review refresh-token and session behavior in the deployed environment.
 - [ ] Verify cost alerts and resource cleanup procedures.
 
-### Milestone 6: CI/CD and Infrastructure Automation
+### Milestone 7: CI/CD and Infrastructure Automation
 
 - [ ] Automate tests and Docker builds with GitHub Actions.
 - [ ] Automate publishing container images to ECR.
@@ -549,7 +603,7 @@ The following milestones remain.
 - [ ] Review infrastructure and deployment changes through Git.
 - [ ] Document rollback and troubleshooting procedures.
 
-## 10. Git Workflow and Documentation
+## 11. Git Workflow and Documentation
 
 Each meaningful milestone should be committed separately.
 
@@ -565,7 +619,7 @@ Recommended workflow:
 
 Never commit secrets, local environment files, Terraform state files, or temporary credentials.
 
-## 11. Current Status
+## 12. Current Status
 
 The following have been completed:
 
@@ -575,8 +629,9 @@ The following have been completed:
 - Remote Terraform state with separate bootstrap and main state keys.
 - VPC, Internet Gateway, public/private subnets, and routing.
 - Four network security groups with restricted ALB-to-app, app-to-database, and app-to-endpoint traffic.
+- Four private interface VPC endpoints (ECR API, ECR Docker Registry, Secrets Manager, CloudWatch Logs) and one S3 gateway endpoint, all verified as `available`.
 - Private ECR repository with image scanning, immutable tags, and lifecycle cleanup policy.
 - Docker image `git-2c6bacd` pushed to ECR and verified by digest.
 - Private RDS for PostgreSQL with encrypted storage, RDS-managed master password in Secrets Manager, one-day automated backup retention, and deletion protection.
 
-**Next milestone:** establish private AWS service access for the future ECS tasks (VPC endpoints versus NAT), then prepare ECS/Fargate task roles and database connectivity. RDS is provisioned privately; application database user creation and Alembic migrations remain outstanding.
+**Next milestone:** create the ECS cluster, least-privilege task execution/application roles, Fargate task definition, and CloudWatch log configuration. The endpoints support required AWS service access without NAT. RDS is provisioned privately; application database user creation and Alembic migrations remain outstanding. Keep the time-limited test objective in mind and remove billable runtime resources after verification.
