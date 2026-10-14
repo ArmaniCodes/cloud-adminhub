@@ -42,3 +42,13 @@ output "endpoints_security_group_id" {
   description = "Security group ID for private AWS service endpoints"
   value       = aws_security_group.endpoints.id
 }
+
+output "ecr_repository_url" {
+  description = "URL used to tag and push Docker images to ECR"
+  value       = aws_ecr_repository.api.repository_url
+}
+
+output "ecr_repository_arn" {
+  description = "ARN of the Cloud AdminHub ECR repository"
+  value       = aws_ecr_repository.api.arn
+}

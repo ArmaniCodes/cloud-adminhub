@@ -149,6 +149,7 @@ terraform/
 ├── main.tf
 ├── network.tf
 ├── security_groups.tf
+├── ecr.tf
 ├── outputs.tf
 ├── .terraform.lock.hcl
 └── bootstrap-state/
@@ -325,7 +326,43 @@ terraform plan
 
 The plan should report no changes when the deployed infrastructure matches the configuration.
 
-## 7. Deployment Roadmap
+## 7. Amazon ECR Container Registry
+
+### Status: Deployed
+
+A private Amazon Elastic Container Registry (ECR) repository has been created for the Cloud AdminHub API image.
+
+- Repository name: `cloud-adminhub-api`
+- Region: `us-east-1`
+- Repository URL: `364503394646.dkr.ecr.us-east-1.amazonaws.com/cloud-adminhub-api`
+- Repository ARN: `arn:aws:ecr:us-east-1:364503394646:repository/cloud-adminhub-api`
+- Terraform resource: `aws_ecr_repository.api`
+- Lifecycle policy resource: `aws_ecr_lifecycle_policy.api`
+
+### Repository Configuration
+
+- [x] Enabled image scanning on push.
+- [x] Set image tag mutability to `IMMUTABLE` to prevent overwriting existing tags.
+- [x] Added a lifecycle rule to retain the 10 most recent images with tags beginning `git-`.
+- [x] Added a lifecycle rule to expire untagged images after one day.
+- [x] Added Terraform outputs for the repository URL and ARN.
+
+The lifecycle policy expects published Git-versioned images to use tags such as `git-a1b2c3d`. Untagged images are eligible for expiration after one day. The repository has been created, but the application image has not yet been pushed to ECR.
+
+### Verification
+
+From the main `terraform/` directory:
+
+```bash
+terraform output ecr_repository_url
+terraform output ecr_repository_arn
+terraform state list | grep ecr
+terraform plan
+```
+
+The expected Terraform resources in state are `aws_ecr_repository.api` and `aws_ecr_lifecycle_policy.api`. The plan should report no changes when the deployed infrastructure matches the configuration.
+
+## 8. Deployment Roadmap
 
 The following milestones remain.
 
@@ -333,9 +370,10 @@ The following milestones remain.
 
 - [x] Create security groups for the future load balancer, API, database, and endpoints.
 - [x] Restrict inbound and inter-service traffic to the required ports.
-- [ ] Create an Amazon ECR repository.
+- [x] Create a private Amazon ECR repository.
+- [x] Enable scan-on-push, immutable image tags, and an image lifecycle policy.
 - [ ] Build, tag, and push the AdminHub Docker image to ECR.
-- [ ] Document image publishing and verification commands.
+- [ ] Verify the pushed image and document publishing commands.
 
 ### Milestone 2: Amazon RDS for PostgreSQL
 
@@ -383,7 +421,7 @@ The following milestones remain.
 - [ ] Review infrastructure and deployment changes through Git.
 - [ ] Document rollback and troubleshooting procedures.
 
-## 8. Git Workflow and Documentation
+## 9. Git Workflow and Documentation
 
 Each meaningful milestone should be committed separately.
 
@@ -399,7 +437,7 @@ Recommended workflow:
 
 Never commit secrets, local environment files, Terraform state files, or temporary credentials.
 
-## 9. Current Status
+## 10. Current Status
 
 The following have been completed:
 
@@ -409,5 +447,6 @@ The following have been completed:
 - Remote Terraform state with separate bootstrap and main state keys.
 - VPC, Internet Gateway, public/private subnets, and routing.
 - Four network security groups with restricted ALB-to-app, app-to-database, and app-to-endpoint traffic.
+- Private ECR repository with image scanning, immutable tags, and lifecycle cleanup policy.
 
-**Next milestone:** create an Amazon ECR repository and push the container image. Then prepare the private RDS deployment, including outbound access through suitable VPC endpoints or NAT as required.
+**Next milestone:** authenticate Docker to ECR, tag and push the local API image, and verify it in the repository. Then prepare the private RDS deployment, including outbound access through suitable VPC endpoints or NAT as required.
