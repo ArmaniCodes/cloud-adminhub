@@ -347,11 +347,69 @@ A private Amazon Elastic Container Registry (ECR) repository has been created fo
 - [x] Added a lifecycle rule to expire untagged images after one day.
 - [x] Added Terraform outputs for the repository URL and ARN.
 
-The lifecycle policy expects published Git-versioned images to use tags such as `git-a1b2c3d`. Untagged images are eligible for expiration after one day. The repository has been created, but the application image has not yet been pushed to ECR.
+The lifecycle policy expects published Git-versioned images to use tags such as `git-a1b2c3d`. Untagged images are eligible for expiration after one day. The application image has now been built and pushed to ECR. The build used a `.dockerignore` file that reduced the Docker build context from about 1.67 GB to 3.79 kB, excluding local artifacts such as virtual environments, Git metadata, environment files, and Terraform working/state files. Keep `.dockerignore` up to date so local secrets and unrelated files are not sent to the build engine.
 
-### Verification
+### Verified Image
 
-From the main `terraform/` directory:
+- Image tag: `git-2c6bacd`
+- Image digest: `sha256:c419448d5500f13d77b55d7ae03ba049f004d7973114ae53fbd14efb4daa4943`
+- Pushed at: `2026-10-14 16:51:34 -04:00`
+
+The digest and tag were verified using `aws ecr describe-images`.
+
+### Build, Authenticate, Push, and Verify
+
+Run the Docker commands from the repository root, where the `Dockerfile` is located. The Git-based image tag is derived from the current commit hash.
+
+```bash
+export AWS_PROFILE=cloudadminhub
+
+AWS_REGION="us-east-1"
+AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+ECR_IMAGE="${ECR_REGISTRY}/cloud-adminhub-api"
+IMAGE_TAG="git-$(git rev-parse --short HEAD)"
+
+docker build -t "${ECR_IMAGE}:${IMAGE_TAG}" .
+
+aws ecr get-login-password --region "$AWS_REGION" \
+  | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+
+docker push "${ECR_IMAGE}:${IMAGE_TAG}"
+```
+
+Verify a pushed image:
+
+```bash
+aws ecr describe-images \
+  --repository-name cloud-adminhub-api \
+  --image-ids imageTag="$IMAGE_TAG" \
+  --region "$AWS_REGION" \
+  --query 'imageDetails[0].{Tags:imageTags,Digest:imageDigest,PushedAt:imagePushedAt}' \
+  --output table
+```
+
+The current verified image is tagged `git-2c6bacd` with digest `sha256:c419448d5500f13d77b55d7ae03ba049f004d7973114ae53fbd14efb4daa4943`.
+
+#### WSL Docker credential-store workaround
+
+If `docker login` fails while saving credentials with an error such as `The stub received bad data`, use a temporary Docker configuration in WSL before running the login and push commands:
+
+```bash
+export DOCKER_CONFIG="$(mktemp -d)"
+chmod 700 "$DOCKER_CONFIG"
+```
+
+After the push is complete, remove the temporary credential configuration:
+
+```bash
+rm -rf "$DOCKER_CONFIG"
+unset DOCKER_CONFIG
+```
+
+Use this workaround only for that session; the temporary configuration may contain an encoded ECR login token.
+
+From the main `terraform/` directory, verify the registry infrastructure:
 
 ```bash
 terraform output ecr_repository_url
@@ -372,8 +430,10 @@ The following milestones remain.
 - [x] Restrict inbound and inter-service traffic to the required ports.
 - [x] Create a private Amazon ECR repository.
 - [x] Enable scan-on-push, immutable image tags, and an image lifecycle policy.
-- [ ] Build, tag, and push the AdminHub Docker image to ECR.
-- [ ] Verify the pushed image and document publishing commands.
+- [x] Build the AdminHub Docker image with a Git-based tag.
+- [x] Authenticate Docker to ECR and push the image.
+- [x] Verify the pushed image tag and digest.
+- [x] Document image publishing, verification, and the WSL credential-store workaround.
 
 ### Milestone 2: Amazon RDS for PostgreSQL
 
@@ -448,5 +508,6 @@ The following have been completed:
 - VPC, Internet Gateway, public/private subnets, and routing.
 - Four network security groups with restricted ALB-to-app, app-to-database, and app-to-endpoint traffic.
 - Private ECR repository with image scanning, immutable tags, and lifecycle cleanup policy.
+- Docker image `git-2c6bacd` pushed to ECR and verified by digest.
 
-**Next milestone:** authenticate Docker to ECR, tag and push the local API image, and verify it in the repository. Then prepare the private RDS deployment, including outbound access through suitable VPC endpoints or NAT as required.
+**Next milestone:** prepare the private RDS for PostgreSQL deployment. Before provisioning it, decide how private workloads will access required AWS services and image/logging endpoints (VPC endpoints versus NAT), and review the database subnet group, credentials, backups, and deletion protection.
