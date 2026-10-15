@@ -35,11 +35,17 @@ def read_secret_env(variable_name: str) -> dict:
     return secret
 
 
+
 def execute_formatted(connection, statement_format: str, *args) -> None:
     """Safely quote PostgreSQL identifiers and literals with format()."""
-    placeholders = [f":p{i}" for i in range(len(args))]
+    placeholders = [
+        f"CAST(:p{i} AS text)" for i in range(len(args))
+    ]
+
     statement = text(
-        "SELECT format(:fmt, " + ", ".join(placeholders) + ")"
+        "SELECT format(CAST(:fmt AS text), "
+        + ", ".join(placeholders)
+        + ")"
     )
 
     parameters = {
@@ -49,6 +55,7 @@ def execute_formatted(connection, statement_format: str, *args) -> None:
 
     sql = connection.execute(statement, parameters).scalar_one()
     connection.exec_driver_sql(sql)
+
 
 
 def synchronize_login_role(connection, role_name: str, password: str) -> None:

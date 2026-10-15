@@ -31,3 +31,9 @@ variable "private_subnet_cidrs" {
     error_message = "Provide exactly two private subnet CIDRs."
   }
 }
+
+variable "api_image_tag" {
+  description = "Immutable ECR image tag to run in ECS"
+  type        = string
+  default     = "git-44bf707"
+}

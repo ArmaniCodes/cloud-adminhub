@@ -107,3 +107,14 @@ output "migration_db_secret_arn" {
   description = "ARN of the database migration credentials secret"
   value       = aws_secretsmanager_secret.migration_db_credentials.arn
 }
+
+
+output "bootstrap_task_definition_arn" {
+  description = "Task definition ARN for the one-off database bootstrap task"
+  value       = aws_ecs_task_definition.bootstrap.arn
+}
+
+output "bootstrap_log_group_name" {
+  description = "CloudWatch log group for database bootstrap execution"
+  value       = aws_cloudwatch_log_group.bootstrap.name
+}
