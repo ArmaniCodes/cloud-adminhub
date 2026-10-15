@@ -71,11 +71,16 @@ def synchronize_login_role(connection, role_name: str, password: str) -> None:
             role_name,
             password,
         )
-    except Exception:
-        # Do not expose the generated SQL, which contains the password.
+    except Exception as exc:
+        original_error = getattr(exc, "orig", None)
+        error_type = type(original_error or exc).__name__
+        sqlstate = getattr(original_error, "sqlstate", None)
+
         raise RuntimeError(
-            f"Could not create or update database role {role_name}"
-        ) from None
+            f"Could not create or update database role {role_name} "
+            f"(error type: {error_type}, "
+            f"SQLSTATE: {sqlstate or 'unknown'})"
+        )from None
 
 
 def build_engine(username: str, password: str):
@@ -198,15 +203,21 @@ def main() -> None:
 
     print("Database roles and permissions configured successfully.")
 
-
 if __name__ == "__main__":
     try:
         main()
+    except RuntimeError as exc:
+        # RuntimeError messages in this script are deliberately sanitized.
+        print(
+            f"Database bootstrap failed: {exc}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     except Exception as exc:
-        # Avoid logging secret values or SQL statements containing passwords.
+        # Do not expose passwords, connection strings, or SQL statements.
         print(
             f"Database bootstrap failed: {type(exc).__name__}. "
-            "Check the ECS task's configuration and CloudWatch logs.",
+            "Check the task configuration and database connectivity.",
             file=sys.stderr,
         )
         sys.exit(1)
