@@ -666,4 +666,29 @@ The following have been completed:
 - Docker image `git-2c6bacd` pushed to ECR and verified by digest.
 - Private RDS for PostgreSQL with encrypted storage, RDS-managed master password in Secrets Manager, one-day automated backup retention, and deletion protection.
 
-**Next milestone:** configure the Fargate task definition and ECS service, including secure database settings, permissions for reading the required secret, and CloudWatch logging. The cluster, IAM roles, and log group are already created. The endpoints support access to required AWS services without NAT. RDS is provisioned privately; application database user creation and Alembic migrations remain outstanding. Keep the time-limited test objective in mind and remove billable runtime resources after verification.
+### Database Role Bootstrap
+
+**Status: Deployed and verified**
+
+- [x] Created separate Secrets Manager secrets for application and migration credentials.
+- [x] Created the `cloud_adminhub_app` PostgreSQL login for application access.
+- [x] Created the `cloud_adminhub_migrator` PostgreSQL login for Alembic schema migrations.
+- [x] Configured separate permissions for application data access and schema changes.
+- [x] Created a dedicated ECS/Fargate bootstrap task definition.
+- [x] Scoped the bootstrap execution role to retrieve only the required database credential secrets.
+- [x] Ran the bootstrap task in private subnets with public IP assignment disabled.
+- [x] Verified the bootstrap task completed with exit code 0.
+- [x] Verified both application and migration credentials successfully authenticated to PostgreSQL.
+
+The bootstrap task uses the Docker image tagged `git-8a2991a` and writes logs to `/ecs/cloud-adminhub-db-bootstrap`. The RDS master password remains managed by RDS through Secrets Manager.
+
+The bootstrap task creates database roles and configures grants. **Alembic migrations still need to be run** using the migration account before the API can use the database schema.
+
+No database passwords or secret values are stored in the repository.
+
+#### Next steps
+
+- [ ] Run Alembic migrations against RDS using the migration role.
+- [ ] Deploy the FastAPI service on ECS/Fargate.
+- [ ] Configure an Application Load Balancer and test the API end to end.
+- [ ] Tear down billable AWS resources after testing and document the cleanup procedure.

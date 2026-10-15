@@ -35,5 +35,5 @@ variable "private_subnet_cidrs" {
 variable "api_image_tag" {
   description = "Immutable ECR image tag to run in ECS"
   type        = string
-  default     = "git-44bf707"
+  default     = "git-8a2991a"
 }
