@@ -72,3 +72,28 @@ output "rds_master_secret_arn" {
   description = "ARN of the RDS-managed master password secret"
   value       = aws_db_instance.postgres.master_user_secret[0].secret_arn
 }
+
+output "ecs_cluster_name" {
+  description = "Name of the Cloud AdminHub ECS cluster"
+  value       = aws_ecs_cluster.main.name
+}
+
+output "ecs_cluster_arn" {
+  description = "ARN of the Cloud AdminHub ECS cluster"
+  value       = aws_ecs_cluster.main.arn
+}
+
+output "ecs_task_execution_role_arn" {
+  description = "IAM role used by ECS to pull images and send logs"
+  value       = aws_iam_role.ecs_task_execution.arn
+}
+
+output "ecs_task_role_arn" {
+  description = "IAM role assigned to the application container"
+  value       = aws_iam_role.ecs_task.arn
+}
+
+output "ecs_log_group_name" {
+  description = "CloudWatch log group for the API"
+  value       = aws_cloudwatch_log_group.api.name
+}

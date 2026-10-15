@@ -533,7 +533,36 @@ terraform plan
 
 The five endpoints were verified as `available`: four interface endpoints and one S3 gateway endpoint. The plan should report no changes when deployed resources match the configuration.
 
-## 10. Deployment Roadmap
+## 10. ECS Foundation
+
+### Status: Deployed
+
+The initial ECS foundation has been created in `us-east-1`. These resources prepare the project for Fargate tasks but do not run the application yet.
+
+| Resource | Value | Purpose |
+|---|---|---|
+| ECS cluster | `cloud-adminhub` | Logical home for the API service and tasks |
+| Cluster ARN | `arn:aws:ecs:us-east-1:364503394646:cluster/cloud-adminhub` | Cluster identifier |
+| Task execution role | `cloud-adminhub-ecs-execution` | Used by ECS to pull container images and send logs |
+| Execution role policy | `AmazonECSTaskExecutionRolePolicy` | Standard image-pull and logging permissions |
+| Application task role | `cloud-adminhub-ecs-task` | Separate application identity; no additional permissions attached yet |
+| CloudWatch log group | `/ecs/cloud-adminhub-api` | API container logs, retained for seven days |
+
+### Verification
+
+Terraform outputs confirmed the cluster name and ARN, both IAM role ARNs, and the log group name.
+
+```bash
+terraform output ecs_cluster_name
+terraform output ecs_cluster_arn
+terraform output ecs_task_execution_role_arn
+terraform output ecs_task_role_arn
+terraform output ecs_log_group_name
+```
+
+The Fargate task definition and ECS service have not been created yet. Before deploying tasks, configure the application to consume database connection settings securely, grant the execution role access to the required Secrets Manager secret, and create a least-privilege database user instead of using the RDS master user for routine application connections.
+
+## 11. Deployment Roadmap
 
 The following milestones remain.
 
@@ -569,11 +598,13 @@ The following milestones remain.
 
 ### Milestone 4: ECS and Fargate
 
-- [ ] Create an ECS cluster.
-- [ ] Define the task execution role and application task role.
+- [x] Create the ECS cluster.
+- [x] Create the task execution role and attach the standard ECS execution policy.
+- [x] Create a separate application task role with no extra permissions initially.
+- [x] Create a CloudWatch log group with seven-day retention.
 - [ ] Configure the Fargate task definition.
 - [ ] Configure the application environment and secrets.
-- [ ] Configure CloudWatch logging.
+- [ ] Grant the execution role access to the required Secrets Manager secret.
 - [ ] Deploy the FastAPI service in private subnets.
 - [ ] Verify health checks and database connectivity.
 
@@ -603,7 +634,7 @@ The following milestones remain.
 - [ ] Review infrastructure and deployment changes through Git.
 - [ ] Document rollback and troubleshooting procedures.
 
-## 11. Git Workflow and Documentation
+## 12. Git Workflow and Documentation
 
 Each meaningful milestone should be committed separately.
 
@@ -619,7 +650,7 @@ Recommended workflow:
 
 Never commit secrets, local environment files, Terraform state files, or temporary credentials.
 
-## 12. Current Status
+## 13. Current Status
 
 The following have been completed:
 
@@ -630,8 +661,9 @@ The following have been completed:
 - VPC, Internet Gateway, public/private subnets, and routing.
 - Four network security groups with restricted ALB-to-app, app-to-database, and app-to-endpoint traffic.
 - Four private interface VPC endpoints (ECR API, ECR Docker Registry, Secrets Manager, CloudWatch Logs) and one S3 gateway endpoint, all verified as `available`.
+- ECS cluster, separate task execution and application roles, standard execution-policy attachment, and seven-day CloudWatch log group.
 - Private ECR repository with image scanning, immutable tags, and lifecycle cleanup policy.
 - Docker image `git-2c6bacd` pushed to ECR and verified by digest.
 - Private RDS for PostgreSQL with encrypted storage, RDS-managed master password in Secrets Manager, one-day automated backup retention, and deletion protection.
 
-**Next milestone:** create the ECS cluster, least-privilege task execution/application roles, Fargate task definition, and CloudWatch log configuration. The endpoints support required AWS service access without NAT. RDS is provisioned privately; application database user creation and Alembic migrations remain outstanding. Keep the time-limited test objective in mind and remove billable runtime resources after verification.
+**Next milestone:** configure the Fargate task definition and ECS service, including secure database settings, permissions for reading the required secret, and CloudWatch logging. The cluster, IAM roles, and log group are already created. The endpoints support access to required AWS services without NAT. RDS is provisioned privately; application database user creation and Alembic migrations remain outstanding. Keep the time-limited test objective in mind and remove billable runtime resources after verification.
