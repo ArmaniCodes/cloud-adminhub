@@ -97,3 +97,13 @@ output "ecs_log_group_name" {
   description = "CloudWatch log group for the API"
   value       = aws_cloudwatch_log_group.api.name
 }
+
+output "app_db_secret_arn" {
+  description = "ARN of the runtime PostgreSQL credentials secret"
+  value       = aws_secretsmanager_secret.app_db_credentials.arn
+}
+
+output "migration_db_secret_arn" {
+  description = "ARN of the database migration credentials secret"
+  value       = aws_secretsmanager_secret.migration_db_credentials.arn
+}
