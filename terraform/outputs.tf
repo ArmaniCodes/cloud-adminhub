@@ -118,3 +118,13 @@ output "bootstrap_log_group_name" {
   description = "CloudWatch log group for database bootstrap execution"
   value       = aws_cloudwatch_log_group.bootstrap.name
 }
+
+output "migration_task_definition_arn" {
+  description = "Task definition ARN for the one-off Alembic migration task"
+  value       = aws_ecs_task_definition.migration.arn
+}
+
+output "migration_log_group_name" {
+  description = "CloudWatch log group for database migration execution"
+  value       = aws_cloudwatch_log_group.migration.name
+}
