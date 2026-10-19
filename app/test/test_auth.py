@@ -1,15 +1,10 @@
-"""Focused unit tests for authentication and authorization helpers.
-
-These tests intentionally use an in-memory SQLite URL only to allow application
-modules that configure the SQLAlchemy engine at import time to load. The tests
-below do not open a database connection or run database integration tests.
-"""
+"""Focused unit tests for authentication and authorization helpers."""
 import os
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-# Set test-only configuration before importing app modules that read the
-# environment during import. These values are local to the pytest process.
+# Set test-only configuration before importing application modules that read
+# the environment at import time. Nothing here connects to a database.
 os.environ["SECRET_KEY"] = "test-only-secret-key-never-use-outside-tests"
 os.environ["DATABASE_URL"] = "sqlite+pysqlite:///:memory:"
 
@@ -54,6 +49,29 @@ def test_expired_access_token_is_rejected():
     )
 
     assert decode_access_token(expired_token) is None
+
+
+@pytest.mark.parametrize(
+    "claims",
+    [
+        {"sub": "42", "role": "admin"},  # Missing expiry.
+        {"sub": "42", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
+        {
+            "sub": "not-a-numeric-user-id",
+            "role": "admin",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        },
+        {
+            "sub": "42",
+            "role": "owner",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        },
+    ],
+)
+def test_signed_tokens_with_missing_or_invalid_claims_are_rejected(claims):
+    token = jwt.encode(claims, secret_key, algorithm=ALGORITHM)
+
+    assert decode_access_token(token) is None
 
 
 def test_refresh_tokens_are_random_and_hashing_is_stable():
