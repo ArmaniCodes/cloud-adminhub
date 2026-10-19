@@ -115,7 +115,7 @@ python -m pip install -r requirements.txt
 pytest -q
 ```
 
-On Windows, activate the environment with `.venv\\Scripts\\activate` in PowerShell.
+On Windows PowerShell, activate the environment with `.\\.venv\\Scripts\\Activate.ps1`.
 
 The unit tests cover access-token validation, refresh-token hashing, password-hashing helpers, and role authorization. They do not replace database-backed endpoint integration tests; extending coverage for login, refresh rotation/reuse, CRUD permissions, and audit-log persistence is a useful next step.
 
