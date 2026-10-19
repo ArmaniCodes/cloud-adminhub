@@ -12,6 +12,7 @@ if not secret_key:
     raise ValueError("secret_key cannot be empty")
 
 ALGORITHM = "HS256"
+ALLOWED_ROLES = {"admin", "support", "viewer"}
 
 
 def create_access_token(user_id: int, user_role: str) -> str:
@@ -25,24 +26,33 @@ def create_access_token(user_id: int, user_role: str) -> str:
     token = encode(payload, secret_key, algorithm=ALGORITHM)
     return token
 
+
 def decode_access_token(token: str):
     try:
         decoded_token = decode(
             token,
             secret_key,
-            algorithms=[ALGORITHM]
+            algorithms=[ALGORITHM],
+            options={"require": ["exp", "sub", "role"]},
         )
-        
-        return {
-            'role':decoded_token["role"],
-            'id': decoded_token["sub"]
-        }
-    
-    except ExpiredSignatureError:
+
+        user_id = decoded_token.get("sub")
+        user_role = decoded_token.get("role")
+
+        # Reject validly signed but malformed claims before the caller queries
+        # the database or performs authorization.
+        if (
+            not isinstance(user_id, str)
+            or not user_id.isdecimal()
+            or user_role not in ALLOWED_ROLES
+        ):
+            return None
+
+        return {"role": user_role, "id": user_id}
+
+    except (ExpiredSignatureError, InvalidTokenError):
         return None
-    
-    except InvalidTokenError:
-        return None
+
 
 def hash_refresh_token(token: str) -> str:
     token_bytes = token.encode()
