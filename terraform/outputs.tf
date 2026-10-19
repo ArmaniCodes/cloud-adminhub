@@ -128,3 +128,23 @@ output "migration_log_group_name" {
   description = "CloudWatch log group for database migration execution"
   value       = aws_cloudwatch_log_group.migration.name
 }
+
+output "api_service_name" {
+  description = "ECS service name for Cloud AdminHub"
+  value       = aws_ecs_service.api.name
+}
+
+output "api_task_definition_arn" {
+  description = "Task definition ARN for the FastAPI application"
+  value       = aws_ecs_task_definition.api.arn
+}
+
+output "alb_dns_name" {
+  description = "Public DNS name of the Application Load Balancer"
+  value       = aws_lb.api.dns_name
+}
+
+output "api_base_url" {
+  description = "Temporary HTTP URL for initial health checks"
+  value       = "http://${aws_lb.api.dns_name}"
+}

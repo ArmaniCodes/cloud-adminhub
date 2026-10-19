@@ -22,3 +22,14 @@ resource "aws_secretsmanager_secret" "migration_db_credentials" {
     Name = "cloud-adminhub-migration-db-credentials"
   }
 }
+
+resource "aws_secretsmanager_secret" "api_signing_key" {
+  name        = "cloud-adminhub/api-signing-key"
+  description = "JWT signing key used by the Cloud AdminHub API"
+
+  recovery_window_in_days = 0
+
+  tags = {
+    Name = "cloud-adminhub-api-signing-key"
+  }
+}
