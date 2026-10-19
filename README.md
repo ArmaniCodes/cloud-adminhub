@@ -119,7 +119,6 @@ On Windows, activate the environment with `.venv\\Scripts\\activate` in PowerShe
 
 The unit tests cover access-token validation, refresh-token hashing, password-hashing helpers, and role authorization. They do not replace database-backed endpoint integration tests; extending coverage for login, refresh rotation/reuse, CRUD permissions, and audit-log persistence is a useful next step.
 
-A GitHub Actions workflow is included to run the unit test suite on pushes and pull requests.
 
 ## Repository layout
 
