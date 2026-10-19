@@ -39,8 +39,7 @@ def decode_access_token(token: str):
         user_id = decoded_token.get("sub")
         user_role = decoded_token.get("role")
 
-        # Reject validly signed but malformed claims before the caller queries
-        # the database or performs authorization.
+        # Reject signed but malformed claims before looking up the user.
         if (
             not isinstance(user_id, str)
             or not user_id.isdecimal()
@@ -48,7 +47,7 @@ def decode_access_token(token: str):
         ):
             return None
 
-        return {"role": user_role, "id": user_id}
+        return {"role": user_role, "id": int(user_id)}
 
     except (ExpiredSignatureError, InvalidTokenError):
         return None
