@@ -43,6 +43,7 @@ def decode_access_token(token: str):
         if (
             not isinstance(user_id, str)
             or not user_id.isdecimal()
+            or not isinstance(user_role, str)
             or user_role not in ALLOWED_ROLES
         ):
             return None
