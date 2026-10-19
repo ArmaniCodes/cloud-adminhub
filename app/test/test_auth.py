@@ -27,7 +27,7 @@ from app.security.token import (
 def test_access_token_round_trip_preserves_user_id_and_role():
     token = create_access_token(user_id=42, user_role="admin")
 
-    assert decode_access_token(token) == {"id": "42", "role": "admin"}
+    assert decode_access_token(token) == {"id": 42, "role": "admin"}
 
 
 @pytest.mark.parametrize("token", ["not-a-jwt", "", "abc.def.ghi"])
