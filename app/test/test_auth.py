@@ -66,6 +66,11 @@ def test_expired_access_token_is_rejected():
             "role": "owner",
             "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
         },
+        {
+            "sub": "42",
+            "role": ["admin"],
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        },
     ],
 )
 def test_signed_tokens_with_missing_or_invalid_claims_are_rejected(claims):
